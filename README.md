@@ -1,3 +1,3 @@
 # wuwa-bp-tool
 鳴潮賽事專用 Ban/Pick 系統 
-ttps://quaso-373.github.io/wuwa-bp-tool/wuwa_bp.html
+[ttps://quaso-373.github.io/wuwa-bp-tool/wuwa_bp.html](https://quaso-373.github.io/wuwa-bp-tool/wuwa_bp.html)
