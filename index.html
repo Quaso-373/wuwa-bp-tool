@@ -367,10 +367,11 @@
   </div>
 
 <script>
-  // 自動將原本的名單結合中文檔名映射到 avatar 與 portrait 資料夾
+  // 自動將名單結合中文檔名映射到 avatar 與 portrait 資料夾
   const baseChars = [
+    { id: 'sigurica', name: '西格莉卡', en: 'Sigurica', el: 'Aero' },
     { id: 'emis', name: '愛彌斯', en: 'Aemis', el: 'Fusion' },
-    { id: 'luhess', name: '陸赫斯', en: 'Lu Hess', el: 'Spectro' },
+    { id: 'luhess', name: '陸·赫斯', en: 'Lu Hess', el: 'Spectro' },
     { id: 'lynae', name: '琳奈', en: 'Lynae', el: 'Spectro' },
     { id: 'mornye', name: '莫寧', en: 'Mornye', el: 'Fusion' },
     { id: 'chisa', name: '千咲', en: 'Chisa', el: 'Havoc' },
@@ -413,16 +414,20 @@
     { id: 'aalto', name: '秋水', en: 'Aalto', el: 'Aero' },
     { id: 'yuanwu', name: '淵武', en: 'Yuanwu', el: 'Electro' },
     { id: 'taoqi', name: '桃祈', en: 'Taoqi', el: 'Havoc' },
-    { id: 'rover_m', name: '漂泊者(男)', en: 'Rover M', el: 'Spectro' },
-    { id: 'rover_f', name: '漂泊者(女)', en: 'Rover F', el: 'Havoc' }
+    { id: 'rover_spectro_m', name: '漂泊者·衍射(男)', en: 'Rover (Spectro)', el: 'Spectro', fileName: '漂泊者(男)' },
+    { id: 'rover_havoc_f', name: '漂泊者·湮滅(女)', en: 'Rover (Havoc)', el: 'Havoc', fileName: '漂泊者(女)' },
+    { id: 'rover_aero_m', name: '漂泊者·氣動(男)', en: 'Rover (Aero)', el: 'Aero', fileName: '漂泊者(男)' }
   ];
 
-  // 雙圖庫自動對應邏輯 (抓取中文圖檔名)
-  const chars = baseChars.map(c => ({
-    ...c,
-    img: `./avatar/${c.name}.webp`,      // 供選角池與 Ban 位使用的小頭像
-    portrait: `./portrait/${c.name}.webp` // 供 Pick 位使用的等身立繪
-  }));
+  // 雙圖庫自動對應邏輯 (抓取 fileName，若沒有設定 fileName 則預設抓取 name)
+  const chars = baseChars.map(c => {
+    const file = c.fileName || c.name;
+    return {
+      ...c,
+      img: `./avatar/${file}.webp`,
+      portrait: `./portrait/${file}.webp`
+    };
+  });
 
   const steps = [
     { t: 'ban', team: 'blue', id: 'blue-ban-pre' }, { t: 'ban', team: 'red', id: 'red-ban-pre' },
@@ -535,7 +540,7 @@
     else if (action.type === 'undo') executeUndo();
     else if (action.type === 'timer') executeToggleTimer();
     else if (action.type === 'chat') executeChatMsg(action.role, action.roleName, action.text);
-    else if (action.type === 'reset') location.reload();
+    else if (action.type === 'soft-reset') executeSoftReset();
     else if (action.type === 'name-change') { document.getElementById(`name-${action.team}`).value = action.name; }
   }
 
@@ -579,7 +584,7 @@
 
   function handleTimerClick() { if(isHost) sendAction({ type: 'timer' }); }
   function handleUndoClick() { if(isHost) sendAction({ type: 'undo' }); }
-  function handleResetClick() { if(isHost && confirm("確定重置所有人畫面?")) sendAction({ type: 'reset' }); }
+  function handleResetClick() { if(isHost && confirm("確定清空畫面重新開始 BP 嗎？這不會中斷連線。")) sendAction({ type: 'soft-reset' }); }
   function handleNameChange(team, name) { if(isHost) sendAction({ type: 'name-change', team, name }); }
 
   function sendChatClick() {
@@ -598,7 +603,9 @@
     used.add(c.id); history.push({ step: stepIdx, type: 'pool', cid: c.id, slotId: s.id });
     stepIdx++; renderPool(); update();
   }
+  
   function executeSnipe(slotId) { document.getElementById(slotId).classList.add('sniped'); history.push({ step: stepIdx, type: 'snipe', slotId: slotId }); stepIdx++; update(); }
+  
   function executeUndo() {
     if (history.length === 0) return;
     const last = history.pop(); stepIdx = last.step;
@@ -609,11 +616,28 @@
     } else if (last.type === 'snipe') { document.getElementById(last.slotId).classList.remove('sniped'); }
     renderPool(); update();
   }
+  
   function executeToggleTimer() {
     timerEnabled = !timerEnabled; const btn = document.getElementById('btn-timer'); const timerEl = document.getElementById('timer');
     if (timerEnabled) { btn.innerText = "⏱️ 30s (ON)"; btn.classList.remove('off'); startTimer(); } 
     else { btn.innerText = "⏱️ 30s (OFF)"; btn.classList.add('off'); clearInterval(timerInterval); timerEl.innerText = "∞"; timerEl.classList.remove('warning'); }
   }
+
+  function executeSoftReset() {
+    stepIdx = 0; used.clear(); history = [];
+    document.querySelectorAll('.slot, .ban-box').forEach(el => {
+      el.classList.remove('filled', 'sniped'); el.dataset.charName = "";
+      el.querySelector('img').src = "";
+      if(el.querySelector('.ban-overlay')) el.querySelector('.ban-overlay').remove();
+      if(el.querySelector('.name-tag')) el.querySelector('.name-tag').innerText = '-';
+    });
+    clearInterval(timerInterval); timerEnabled = true; timeLeft = 30;
+    const btn = document.getElementById('btn-timer');
+    if(btn) { btn.innerText = "⏱️ 30s (ON)"; btn.classList.remove('off'); }
+    renderPool(); update();
+    executeChatMsg('system', '系統', '裁判已重置 BP 畫面，進入下一局！');
+  }
+
   function executeChatMsg(role, roleName, text) {
     const msgsContainer = document.getElementById('chat-messages'); const msgDiv = document.createElement('div');
     msgDiv.className = `msg ${role}`; msgDiv.innerHTML = `<b>${roleName}:</b> ${text}`;
@@ -685,6 +709,7 @@
 
       div.className = `card ${statusClass}`; div.onclick = () => onPoolClick(c);
       
+      // --- 3D 視差閃卡互動邏輯 ---
       div.addEventListener('mousemove', (e) => {
           if (div.classList.contains('disabled')) return;
           const rect = div.getBoundingClientRect();
@@ -708,6 +733,7 @@
           div.style.transform = `perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
           setTimeout(() => { div.style.transition = 'transform 0.1s ease, border-color 0.2s, box-shadow 0.2s'; }, 400);
       });
+      // ------------------------------------
 
       div.innerHTML = `<div class="dot c-${c.el}"></div><img src="${c.img}"><div class="card-name">${c.name}</div>`; grid.appendChild(div);
     });
