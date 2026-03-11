@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>鳴潮 BP</title>
+<title>鳴潮 BP - 賽事專用版</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;800&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
@@ -367,10 +367,10 @@
   </div>
 
 <script>
-  // 自動將名單結合中文檔名映射到 avatar 與 portrait 資料夾
+  // 自動將原本的名單結合中文檔名映射到 avatar 與 portrait 資料夾
   const baseChars = [
     { id: 'emis', name: '愛彌斯', en: 'Aemis', el: 'Fusion' },
-    { id: 'luhess', name: '陸·赫斯', en: 'Lu Hess', el: 'Spectro' },
+    { id: 'luhess', name: '陸赫斯', en: 'Lu Hess', el: 'Spectro' },
     { id: 'lynae', name: '琳奈', en: 'Lynae', el: 'Spectro' },
     { id: 'mornye', name: '莫寧', en: 'Mornye', el: 'Fusion' },
     { id: 'chisa', name: '千咲', en: 'Chisa', el: 'Havoc' },
@@ -413,21 +413,16 @@
     { id: 'aalto', name: '秋水', en: 'Aalto', el: 'Aero' },
     { id: 'yuanwu', name: '淵武', en: 'Yuanwu', el: 'Electro' },
     { id: 'taoqi', name: '桃祈', en: 'Taoqi', el: 'Havoc' },
-    { id: 'rover_spectro', name: '漂泊者(光)', en: 'Rover', el: 'Spectro', fileName: '漂泊者(男)' },
-    { id: 'rover_havoc', name: '漂泊者(暗)', en: 'Rover', el: 'Havoc', fileName: '漂泊者(女)' },
-    { id: 'rover_aero', name: '漂泊者(風)', en: 'Rover', el: 'Aero', fileName: '漂泊者(男)' },
-    { id: 'sigurica', name: '西格莉卡', en: 'Sigurica', el: 'Aero' }
+    { id: 'rover_m', name: '漂泊者(男)', en: 'Rover M', el: 'Spectro' },
+    { id: 'rover_f', name: '漂泊者(女)', en: 'Rover F', el: 'Havoc' }
   ];
 
-  // 雙圖庫自動對應邏輯 (抓取 fileName，若沒有設定 fileName 則預設抓取 name)
-  const chars = baseChars.map(c => {
-    const file = c.fileName || c.name;
-    return {
-      ...c,
-      img: `./avatar/${file}.webp`,
-      portrait: `./portrait/${file}.webp`
-    };
-  });
+  // 雙圖庫自動對應邏輯 (抓取中文圖檔名)
+  const chars = baseChars.map(c => ({
+    ...c,
+    img: `./avatar/${c.name}.webp`,      // 供選角池與 Ban 位使用的小頭像
+    portrait: `./portrait/${c.name}.webp` // 供 Pick 位使用的等身立繪
+  }));
 
   const steps = [
     { t: 'ban', team: 'blue', id: 'blue-ban-pre' }, { t: 'ban', team: 'red', id: 'red-ban-pre' },
@@ -690,7 +685,6 @@
 
       div.className = `card ${statusClass}`; div.onclick = () => onPoolClick(c);
       
-      // --- 3D 視差閃卡互動邏輯 ---
       div.addEventListener('mousemove', (e) => {
           if (div.classList.contains('disabled')) return;
           const rect = div.getBoundingClientRect();
@@ -714,7 +708,6 @@
           div.style.transform = `perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
           setTimeout(() => { div.style.transition = 'transform 0.1s ease, border-color 0.2s, box-shadow 0.2s'; }, 400);
       });
-      // ------------------------------------
 
       div.innerHTML = `<div class="dot c-${c.el}"></div><img src="${c.img}"><div class="card-name">${c.name}</div>`; grid.appendChild(div);
     });
