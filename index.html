@@ -87,7 +87,8 @@
   .slot.filled::before { display: none; }
   .slot-inner { width: 150%; height: 100%; margin-left: -25%; transform: skewX(8deg); position: relative; }
   .team-col.right .slot-inner { transform: skewX(-8deg); }
-  .ban-box img, .slot img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: none; }
+  .ban-box img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: none; } 
+  .slot img { width: 100%; height: 100%; object-fit: cover; object-position: center 15%; display: none; }
   .slot.filled img { display: block; filter: grayscale(1) brightness(0.6); }
   
   .slot.active { flex: 3; background: rgba(255,255,255,0.05); border: 2px solid #fff; z-index: 10; }
@@ -758,4 +759,5 @@
 </script>
 </body>
 </html>
+
 
