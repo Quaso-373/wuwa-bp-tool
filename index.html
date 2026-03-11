@@ -368,9 +368,8 @@
   </div>
 
 <script>
-  // 自動將名單結合中文檔名映射到 avatar 與 portrait 資料夾
+  // 自動將名單結合中文檔名映射到 avatar、portrait 與 audio 資料夾
   const baseChars = [
-    { id: 'sigurica', name: '西格莉卡', en: 'Sigurica', el: 'Aero' },
     { id: 'emis', name: '愛彌斯', en: 'Aemis', el: 'Fusion' },
     { id: 'luhess', name: '陸·赫斯', en: 'Lu Hess', el: 'Spectro' },
     { id: 'lynae', name: '琳奈', en: 'Lynae', el: 'Spectro' },
@@ -415,18 +414,19 @@
     { id: 'aalto', name: '秋水', en: 'Aalto', el: 'Aero' },
     { id: 'yuanwu', name: '淵武', en: 'Yuanwu', el: 'Electro' },
     { id: 'taoqi', name: '桃祈', en: 'Taoqi', el: 'Havoc' },
-    { id: 'rover_spectro_m', name: '漂泊者·衍射', en: 'Rover (Spectro)', el: 'Spectro', fileName: '漂泊者(男)' },
-    { id: 'rover_havoc_f', name: '漂泊者·湮滅', en: 'Rover (Havoc)', el: 'Havoc', fileName: '漂泊者(女)' },
-    { id: 'rover_aero_m', name: '漂泊者·氣動', en: 'Rover (Aero)', el: 'Aero', fileName: '漂泊者(男)' }
+    { id: 'rover_spectro_m', name: '漂泊者·衍射(男)', en: 'Rover (Spectro)', el: 'Spectro', fileName: '漂泊者(男)' },
+    { id: 'rover_havoc_f', name: '漂泊者·湮滅(女)', en: 'Rover (Havoc)', el: 'Havoc', fileName: '漂泊者(女)' },
+    { id: 'rover_aero_m', name: '漂泊者·氣動(男)', en: 'Rover (Aero)', el: 'Aero', fileName: '漂泊者(男)' }
   ];
 
-  // 雙圖庫自動對應邏輯 (抓取 fileName，若沒有設定 fileName 則預設抓取 name)
+  // 三路徑自動對應邏輯 (頭像、立繪、語音)
   const chars = baseChars.map(c => {
     const file = c.fileName || c.name;
     return {
       ...c,
       img: `./avatar/${file}.webp`,
-      portrait: `./portrait/${file}.webp`
+      portrait: `./portrait/${file}.webp`,
+      audio: `./audio/${file}.wav` // 新增語音檔對應
     };
   });
 
@@ -601,6 +601,12 @@
     slot.dataset.charName = c.name; 
     if (s.t === 'ban') { slot.querySelector('img').src = c.img; slot.innerHTML += `<div class="ban-overlay">X</div>`; slot.classList.add('filled'); } 
     else { slot.querySelector('img').src = c.portrait; slot.querySelector('.name-tag').innerText = c.name; slot.classList.add('filled'); slot.dataset.cid = c.id; }
+    
+    // 播放語音音效 (僅在 Pick 階段播放)
+    if (s.t === 'pick' && c.audio) {
+      new Audio(c.audio).play().catch(e => console.log('語音播放失敗:', e));
+    }
+
     used.add(c.id); history.push({ step: stepIdx, type: 'pool', cid: c.id, slotId: s.id });
     stepIdx++; renderPool(); update();
   }
@@ -759,5 +765,3 @@
 </script>
 </body>
 </html>
-
-
