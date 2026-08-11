@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鳴潮 BP - 賽事專用版</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="preload" href="lobby-bg.jpg" as="image">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;800&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<style>
+  :root {
+    --bg: #050508; --border: #333; --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444;
+    --h-header: 60px; --h-stage: 45vh;
+  }
+  * { box-sizing: border-box; user-select: none; }
+  body { margin: 0; padding: 0; background-color: var(--bg); color: #eee; font-family: 'Rajdhani', 'Noto Sans TC', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ======= 網路大廳（重新設計）======= */
+  .net-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; justify-content: center; align-items: center;
+    background-image: url('lobby-bg.jpg');
+    background-size: cover; background-position: center;
+    padding: 20px; overflow-y: auto;
+  }
+  .net-overlay::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(70% 90% at 8% 55%, rgba(37,99,235,0.22) 0%, transparent 45%),
+      radial-gradient(70% 90% at 92% 55%, rgba(220,38,38,0.22) 0%, transparent 45%),
+      radial-gradient(circle at 50% 30%, rgba(10,12,20,0.5) 0%, rgba(3,3,8,0.9) 78%);
+    z-index: -1;
+  }
+
+  .net-box {
+    position: relative; z-index: 1;
+    width: 620px; max-width: 100%;
+    background: linear-gradient(165deg, rgba(22,23,32,0.92) 0%, rgba(12,12,18,0.94) 100%);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 18px; padding: 34px 34px 26px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);
+    animation: net-rise 0.5s cubic-bezier(0.16,1,0.3,1);
+  }
+  /* 頂部金色細線點綴 */
+  .net-box::before {
+    content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 2px; border-radius: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    box-shadow: 0 0 12px rgba(251,191,36,0.6);
+  }
+  @keyframes net-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  .net-head { text-align: center; margin-bottom: 26px; }
+  .net-eyebrow { font-size: 11px; letter-spacing: 4px; color: var(--gold); font-weight: 700; opacity: 0.85; margin-bottom: 8px; }
+  .net-box h2 {
+    margin: 0; color: #fff; font-size: 30px; font-weight: 800; letter-spacing: 3px;
+    text-shadow: 0 0 24px rgba(255,255,255,0.18);
+  }
+  .net-sub { margin-top: 8px; font-size: 13px; color: #8b8b96; letter-spacing: 1px; }
+
+  /* 區塊標題（帶序號）*/
+  .sec-label { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 700; font-size: 15px; margin-bottom: 14px; letter-spacing: 1px; }
+  .sec-no { display: inline-flex; justify-content: center; align-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); color: #000; font-size: 13px; font-weight: 900; box-shadow: 0 0 12px rgba(251,191,36,0.4); }
+  .sec-note { font-size: 12px; color: #888; margin: 4px 0 0; line-height: 1.5; }
+
+  .identity-section { margin-bottom: 22px; text-align: left; }
+  .nickname-input, .room-input, .net-box select {
+    width: 100%; padding: 13px 14px; background: rgba(0,0,0,0.55);
+    border: 1px solid #3a3a44; color: #fff; font-size: 15px; border-radius: 10px;
+    outline: none; font-family: inherit; transition: 0.2s;
+  }
+  .nickname-input { margin-bottom: 12px; }
+  .nickname-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(251,191,36,0.12); }
+  .required-star { color: var(--red); font-weight: 900; margin-left: 2px; }
+  .input-error { border-color: var(--red) !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.18) !important; animation: shake-input 0.4s; }
+  @keyframes shake-input { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+
+  /* 自訂 select：包一層 wrap，箭頭用偽元素，文字不再被截斷 */
+  .select-wrap { position: relative; }
+  .net-box select { appearance: none; -webkit-appearance: none; -moz-appearance: none; padding-right: 38px; cursor: pointer; text-overflow: ellipsis; }
+  .net-box select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(251,191,36,0.12); }
+  .select-wrap::after {
+    content: '▾'; position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    color: #888; font-size: 12px; pointer-events: none;
+  }
+  .net-box select option { background: #16161e; color: #fff; }
+
+  /* 建立 / 加入 卡片 */
+  .net-split { display: flex; gap: 16px; align-items: stretch; }
+  .net-card {
+    flex: 1; display: flex; flex-direction: column; align-items: flex-start;
+    background: rgba(255,255,255,0.025); padding: 22px 20px;
+    border-radius: 14px; border: 1px solid rgba(255,255,255,0.07);
+    position: relative; overflow: hidden; transition: 0.25s;
+  }
+  .net-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; opacity: 0.9; }
+  .card-host { background: linear-gradient(160deg, rgba(37,99,235,0.10) 0%, rgba(255,255,255,0.02) 55%); }
+  .card-join { background: linear-gradient(160deg, rgba(220,38,38,0.10) 0%, rgba(255,255,255,0.02) 55%); }
+  .card-host::before { background: linear-gradient(90deg, #2563eb, #10b981); box-shadow: 0 0 14px rgba(37,99,235,0.5); }
+  .card-join::before { background: linear-gradient(90deg, #dc2626, #fb7185); box-shadow: 0 0 14px rgba(220,38,38,0.5); }
+  .card-host:hover { border-color: rgba(59,130,246,0.55); box-shadow: 0 12px 34px rgba(37,99,235,0.22); transform: translateY(-3px); }
+  .card-join:hover { border-color: rgba(239,68,68,0.55); box-shadow: 0 12px 34px rgba(220,38,38,0.22); transform: translateY(-3px); }
+  .card-icon { font-size: 26px; margin-bottom: 8px; }
+  /* 角色圖標（圖檔）*/
+  .card-icon-img { width: 46px; height: 46px; object-fit: contain; margin-bottom: 8px; }
+
+  /* 身分按鈕選擇 */
+  .role-btns { display: flex; gap: 10px; }
+  .role-btn {
+    flex: 1; padding: 12px 10px; border-radius: 10px; cursor: pointer;
+    background: rgba(0,0,0,0.45); border: 1px solid #3a3a44; color: #bbb;
+    font-family: inherit; font-size: 14px; font-weight: 700; letter-spacing: 1px;
+    transition: 0.18s;
+  }
+  .role-btn:hover { border-color: #555; color: #eee; }
+  .role-btn.role-blue.active { border-color: var(--blue); color: #fff; background: rgba(59,130,246,0.16); box-shadow: 0 0 0 3px rgba(59,130,246,0.14); }
+  .role-btn.role-red.active { border-color: var(--red); color: #fff; background: rgba(239,68,68,0.16); box-shadow: 0 0 0 3px rgba(239,68,68,0.14); }
+  .net-card h3 { margin: 0; font-size: 19px; color: #fff; font-weight: 800; letter-spacing: 1px; }
+  .card-tag { font-size: 11px; color: #999; letter-spacing: 1px; margin-top: 3px; padding: 2px 8px; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; }
+  .net-card p { font-size: 12px; color: #9a9aa4; margin: 12px 0 16px; line-height: 1.6; }
+  .net-card .net-btn { margin-top: auto; }   /* 按鈕對齊到底部，兩卡等高 */
+
+  .room-input { text-align: center; letter-spacing: 8px; font-size: 22px; font-weight: 800; margin-bottom: 12px; }
+  .room-input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(239,68,68,0.12); }
+
+  .net-btn {
+    width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer;
+    font-weight: 800; font-size: 15px; letter-spacing: 2px; font-family: inherit;
+    color: #fff; transition: 0.2s;
+  }
+  .net-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+  .net-btn:active { transform: translateY(0); }
+  .net-btn-host { background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 6px 18px rgba(37,99,235,0.35); }
+  .net-btn-join { background: linear-gradient(135deg, #dc2626, #b91c1c); box-shadow: 0 6px 18px rgba(220,38,38,0.35); }
+
+  .room-id-display { width: 100%; text-align: center; font-size: 30px; font-weight: 900; color: #10b981; letter-spacing: 6px; margin-top: 14px; text-shadow: 0 0 14px rgba(16,185,129,0.55); }
+
+  /* 進階賽制設定（可折疊）*/
+  .format-section { margin-top: 18px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden; background: rgba(255,255,255,0.02); }
+  .format-toggle {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    padding: 13px 16px; background: transparent; border: none; cursor: pointer;
+    color: #ddd; font-family: inherit; font-size: 14px; font-weight: 700; letter-spacing: 1px;
+  }
+  .format-toggle:hover { background: rgba(255,255,255,0.03); }
+  .format-toggle .gear { color: var(--gold); margin-right: 6px; }
+  .format-hint { font-size: 11px; color: #777; font-weight: 400; margin-left: 6px; }
+  .format-toggle .chevron { color: #888; transition: transform 0.3s; }
+  .format-section:not(.collapsed) .format-toggle .chevron { transform: rotate(180deg); }
+  .format-body { max-height: 320px; transition: max-height 0.35s ease, opacity 0.25s; opacity: 1; overflow: hidden; }
+  .format-section.collapsed .format-body { max-height: 0; opacity: 0; }
+  .format-row { display: flex; gap: 12px; padding: 4px 16px 16px; flex-wrap: wrap; }
+  .format-row .mini { flex: 1; min-width: 150px; text-align: left; }
+  .format-row .mini > span { display: block; font-size: 11px; color: #888; margin-bottom: 6px; letter-spacing: 0.5px; }
+
+  /* 單機測試：低調次要連結 */
+  .offline-link {
+    display: block; margin: 18px auto 4px; background: none; border: none;
+    color: #777; font-family: inherit; font-size: 13px; cursor: pointer;
+    letter-spacing: 1px; transition: 0.2s; padding: 6px;
+  }
+  .offline-link:hover { color: var(--gold); }
+
+  /* --- UI 結構 --- */
+  .header { height: var(--h-header); display: flex; align-items: stretch; background: #000; border-bottom: 1px solid var(--gold); box-shadow: 0 2px 20px rgba(251,191,36,0.12); flex-shrink: 0; z-index: 20; position: relative; overflow: hidden; }
+  .header-decor { flex: 1; background-image: url('logo.gif'); background-size: 50px auto; background-repeat: repeat-x; background-position: center; opacity: 0.6; filter: grayscale(0.5); }
+  .header-decor.right { transform: scaleX(-1); }
+  .header-center { flex: 0 0 auto; padding: 0 44px; display: flex; justify-content: center; align-items: center; background: linear-gradient(90deg, transparent, #0e0e14 30%, #14140c 50%, #0e0e14 70%, transparent); position: relative; z-index: 2; }
+  .header-center::before, .header-center::after { content: ''; position: absolute; top: 20%; height: 60%; width: 1px; background: linear-gradient(transparent, rgba(251,191,36,0.6), transparent); }
+  .header-center::before { left: 0; } .header-center::after { right: 0; }
+  .title { font-size: 24px; font-weight: 800; letter-spacing: 5px; color: #fff; text-shadow: 0 0 12px rgba(251,191,36,0.4), 0 0 6px rgba(255,255,255,0.3); white-space: nowrap; }
+
+  .back-btn {
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%); z-index: 30;
+    display: flex; align-items: center; gap: 4px;
+    padding: 7px 15px 7px 11px; border-radius: 8px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.14);
+    color: #cfcfd6; font-family: inherit; font-size: 14px; font-weight: 700; letter-spacing: 1px;
+    cursor: pointer; transition: 0.2s; backdrop-filter: blur(4px);
+  }
+  .back-btn:hover { background: rgba(251,191,36,0.12); border-color: var(--gold); color: var(--gold); transform: translateY(-50%) translateX(-2px); }
+  .back-arrow { font-size: 20px; line-height: 1; margin-top: -2px; }
+
+  .status-bar { height: 28px; display: flex; justify-content: center; align-items: center; font-size: 14px; font-weight: 700; letter-spacing: 2px; background: #1a1a1f; border-bottom: 1px solid var(--border); transition: 0.3s; flex-shrink: 0; text-shadow: 0 0 8px rgba(255,255,255,0.2); }
+  .status-bar.blue { background: rgba(59,130,246,0.15); color: #93c5fd; border-bottom: 2px solid var(--blue); box-shadow: 0 2px 10px rgba(59,130,246,0.2); }
+  .status-bar.red { background: rgba(239,68,68,0.15); color: #fca5a5; border-bottom: 2px solid var(--red); box-shadow: 0 2px 10px rgba(239,68,68,0.2); }
+  .status-bar.snipe { background: #300; color: #fff; border-bottom: 2px solid #f00; animation: pulse-bg 1s infinite alternate; }
+  .status-bar.done { background: var(--gold); color: #000; border-bottom: 2px solid #fff; font-weight: 900; }
+  @keyframes pulse-bg { from { background: #300; } to { background: #500; } }
+
+  /* --- 舞台區 --- */
+  .stage-wrapper {
+    height: var(--h-stage); display: flex; overflow: hidden; position: relative;
+    background:
+      radial-gradient(130% 100% at 12% 45%, rgba(37,99,235,0.28) 0%, transparent 45%),
+      radial-gradient(130% 100% at 88% 45%, rgba(239,68,68,0.28) 0%, transparent 45%),
+      radial-gradient(100% 120% at 50% 8%, #171826 0%, #0a0a12 55%, #050508 100%);
+    flex-shrink: 0; padding: 10px 0; transition: height 0.3s;
+  }
+  /* 舞台地面光帶（地平線） */
+  .stage-wrapper::before {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 42%;
+    background:
+      linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.55) 100%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 60px);
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 60%);
+            mask-image: linear-gradient(180deg, transparent, #000 60%);
+    pointer-events: none; z-index: 0;
+  }
+  /* 中央柔光暈，襯托 VS */
+  .stage-wrapper::after {
+    content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 240px; height: 240px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(251,191,36,0.10) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  .stage { flex: 1; display: flex; justify-content: center; align-items: stretch; gap: 1.5%; padding: 0 1%; width: 100%; max-width: 1800px; margin: 0 auto; }
+  
+  .vs-divider { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 90px; flex-shrink: 0; z-index: 5; gap: 14px; transition: 0.3s; position: relative; }
+  /* 上下裝飾光線 */
+  .vs-divider::before, .vs-divider::after {
+    content: ''; position: absolute; left: 50%; transform: translateX(-50%);
+    width: 1px; height: 22%;
+    background: linear-gradient(var(--gold), transparent);
+    opacity: 0.5;
+  }
+  .vs-divider::before { top: 8%; background: linear-gradient(transparent, var(--gold)); }
+  .vs-divider::after { bottom: 8%; }
+  .vs-divider span {
+    font-size: 22px; font-weight: 900; font-style: italic; letter-spacing: 3px;
+    color: rgba(255,255,255,0.85);
+    text-shadow: 0 0 18px rgba(251,191,36,0.5), 0 2px 4px #000;
+  }
+  .timer {
+    width: 66px; height: 66px; display: flex; justify-content: center; align-items: center;
+    background: radial-gradient(circle at 50% 35%, #1c1d28 0%, #0a0a10 100%);
+    border: 2px solid var(--gold); border-radius: 50%;
+    font-size: 26px; font-weight: 800; color: #fff; font-style: normal;
+    letter-spacing: normal; position: relative;
+    box-shadow: 0 0 22px rgba(251,191,36,0.35), inset 0 0 18px rgba(0,0,0,0.9);
+    transition: 0.3s;
+  }
+  /* 外環光圈 */
+  .timer::before {
+    content: ''; position: absolute; inset: -7px; border-radius: 50%;
+    border: 1px solid rgba(251,191,36,0.3);
+    box-shadow: 0 0 16px rgba(251,191,36,0.25);
+  }
+  .timer.warning { color: var(--red); border-color: var(--red); animation: pulse-timer 0.5s infinite alternate; box-shadow: 0 0 22px rgba(239,68,68,0.6), inset 0 0 18px rgba(0,0,0,0.9); }
+  .timer.warning::before { border-color: rgba(239,68,68,0.5); box-shadow: 0 0 20px rgba(239,68,68,0.4); }
+  @keyframes pulse-timer { from { transform: scale(1); } to { transform: scale(1.15); } }
+
+  .team-col { flex: 1; display: flex; flex-direction: column; transform: skewX(-8deg); padding: 4px; position: relative; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+  .team-col.right { transform: skewX(8deg); }
+  /* 隊色浸染 */
+  .team-col.blue { background: linear-gradient(105deg, rgba(37,99,235,0.26) 0%, rgba(37,99,235,0.06) 50%, transparent 80%); box-shadow: inset 3px 0 45px rgba(37,99,235,0.18), 0 0 30px rgba(0,0,0,0.5); }
+  .team-col.red { background: linear-gradient(255deg, rgba(239,68,68,0.28) 0%, rgba(239,68,68,0.07) 50%, transparent 80%); box-shadow: inset -3px 0 45px rgba(239,68,68,0.2), 0 0 30px rgba(0,0,0,0.5); }
+  /* 頂部隊色光帶 */
+  .team-col::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; opacity: 0.8; }
+  .team-col.blue::after { background: linear-gradient(90deg, var(--blue), transparent); box-shadow: 0 0 12px rgba(59,130,246,0.7); }
+  .team-col.red::after { background: linear-gradient(270deg, var(--red), transparent); box-shadow: 0 0 12px rgba(239,68,68,0.7); }
+  
+  .team-top { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px; height: 50px; padding: 0 20px; transition: 0.3s; }
+  .team-info-inner { width: 100%; display: flex; justify-content: space-between; align-items: center; transform: skewX(8deg); gap: 15px; } 
+  .team-col.right .team-info-inner { transform: skewX(-8deg); flex-direction: row-reverse; }
+
+  .team-name { font-size: 32px; font-weight: 900; color: #fff; background: transparent; border: none; flex: 1; min-width: 50px; outline: none; font-family: inherit; transition: 0.3s;}
+  .team-name:read-only { cursor: default; }
+  .txt-b { color: var(--blue); text-shadow: 0 0 10px rgba(59,130,246,0.6); } 
+  .txt-r { color: var(--red); text-shadow: 0 0 10px rgba(239,68,68,0.6); text-align: right; }
+
+  .ban-box { width: 50px; height: 50px; background: #0a0a0a; border: 1px solid #444; position: relative; overflow: hidden; box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.5); transition: 0.3s; flex-shrink: 0; }
+  .ban-wrap { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .team-col.right .ban-wrap { flex-direction: row-reverse; }
+  .ban-label { font-size: 15px; font-weight: 900; letter-spacing: 2px; color: #ffcc33; transform: skewX(-8deg); text-shadow: 0 0 6px rgba(255,200,60,0.5); }
+  .team-col.right .ban-label { transform: skewX(8deg); }
+  
+  @keyframes slot-pop { 0% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+  .ban-box.filled img, .slot.filled img { display: block; animation: slot-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  .ban-box.filled img { filter: grayscale(0) brightness(0.85); }
+  .ban-overlay { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; color: #ff3333; font-size: 40px; font-weight: 900; background: rgba(0,0,0,0.2); text-shadow: 0 0 3px #fff, 0 0 10px #f00; font-family: sans-serif; backdrop-filter: blur(1px); transition: 0.3s; animation: fade-in 0.3s; }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+  .pick-row { flex: 1; display: flex; gap: 4px; }
+  .team-col.right .pick-row { flex-direction: row-reverse; }
+  .slot { flex: 1; background: rgba(15, 15, 20, 0.8); border: 1px solid rgba(255,255,255,0.08); position: relative; overflow: hidden; cursor: pointer; transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); }
+  .slot::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.02) 4px, rgba(255,255,255,0.02) 8px); z-index: 1; pointer-events: none; }
+  .slot.filled::before { display: none; }
+  .slot-inner { width: 150%; height: 100%; margin-left: -25%; transform: skewX(8deg); position: relative; }
+  .team-col.right .slot-inner { transform: skewX(-8deg); }
+  .ban-box img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: none; } 
+  .slot img { width: 100%; height: 100%; object-fit: cover; object-position: center 15%; display: none; }
+  .slot.filled img { display: block; filter: grayscale(1) brightness(0.6); }
+  
+  .slot.active { flex: 3; background: rgba(255,255,255,0.05); border: 2px solid #fff; z-index: 10; }
+  .blue .slot.active { border-color: var(--blue); animation: glow-blue 1.5s infinite alternate; }
+  .red .slot.active { border-color: var(--red); animation: glow-red 1.5s infinite alternate; }
+
+  @keyframes glow-blue { from { box-shadow: inset 0 0 10px rgba(59,130,246,0.3), 0 0 15px rgba(59,130,246,0.4); } to { box-shadow: inset 0 0 20px rgba(59,130,246,0.6), 0 0 25px rgba(59,130,246,0.8); } }
+  @keyframes glow-red { from { box-shadow: inset 0 0 10px rgba(239,68,68,0.3), 0 0 15px rgba(239,68,68,0.4); } to { box-shadow: inset 0 0 20px rgba(239,68,68,0.6), 0 0 25px rgba(239,68,68,0.8); } }
+
+  .slot.active img, .slot.filled img { filter: grayscale(0) brightness(1); }
+  .name-tag { position: absolute; bottom: 0; width: 100%; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 40%, transparent 100%); color: #fff; font-size: 14px; text-align: center; padding: 40px 0 6px 0; opacity: 0; transition: 0.3s; font-weight: 800; text-shadow: 0 2px 4px #000, 0 0 5px #000; letter-spacing: 1px; }
+  .slot.filled .name-tag { opacity: 1; }
+  .slot.prot { border-top: 3px solid var(--gold); border-bottom: 3px solid var(--gold); box-shadow: inset 0 0 20px rgba(0,0,0,0.9), inset 0 0 14px rgba(251,191,36,0.25), 0 0 8px rgba(251,191,36,0.35); }
+
+  /* === 破壞階段 (Ban) 劇烈打擊特效 === */
+  @keyframes shake-hard {
+    0% { transform: translate(0, 0) scale(1); filter: brightness(2.5) drop-shadow(0 0 20px red); }
+    20% { transform: translate(-8px, 6px) scale(1.03); }
+    40% { transform: translate(6px, -8px) scale(0.97); }
+    60% { transform: translate(-6px, -3px) scale(1.02); }
+    80% { transform: translate(6px, 4px) scale(0.98); }
+    100% { transform: translate(0, 0) scale(1); filter: grayscale(1) brightness(0.2); }
+  }
+  
+  @keyframes stamp-smash { 
+    0% { transform: translate(-50%,-50%) skewX(8deg) rotate(-25deg) scale(5); opacity: 0; filter: blur(5px); } 
+    50% { transform: translate(-50%,-50%) skewX(8deg) rotate(-15deg) scale(0.8); opacity: 1; filter: blur(0px); box-shadow: 0 0 50px red; }
+    100% { transform: translate(-50%,-50%) skewX(8deg) rotate(-15deg) scale(1); opacity: 1; } 
+  }
+
+  @keyframes stamp-smash-right { 
+    0% { transform: translate(-50%,-50%) skewX(-8deg) rotate(-25deg) scale(5); opacity: 0; filter: blur(5px); } 
+    50% { transform: translate(-50%,-50%) skewX(-8deg) rotate(-15deg) scale(0.8); opacity: 1; filter: blur(0px); box-shadow: 0 0 50px red; }
+    100% { transform: translate(-50%,-50%) skewX(-8deg) rotate(-15deg) scale(1); opacity: 1; } 
+  }
+
+  .slot.sniped { 
+      border-color: #ff0000 !important; 
+      animation: shake-hard 0.4s cubic-bezier(.36,.07,.19,.97) both !important; 
+      box-shadow: inset 0 0 50px rgba(255,0,0,0.8) !important;
+      z-index: 20;
+  }
+  .slot.sniped img { filter: grayscale(1) brightness(0.2) !important; }
+
+  .slot.sniped::after { 
+      content: "BAN"; position: absolute; top:50%; left:50%; 
+      border: 4px solid #ff1111; color: #ff1111; font-weight: 900; font-size: 38px; 
+      padding: 5px 20px; z-index: 20; background: rgba(0,0,0,0.7); 
+      backdrop-filter: blur(2px); text-shadow: 0 0 10px #ff0000;
+      box-shadow: 0 0 15px rgba(255,0,0,0.5), inset 0 0 10px rgba(255,0,0,0.5); 
+      animation: stamp-smash 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; 
+  }
+  .team-col.right .slot.sniped::after { 
+      animation: stamp-smash-right 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; 
+  }
+
+  .valid-target { cursor: pointer; animation: flash-target 1s infinite alternate; }
+  @keyframes flash-target { from { border-color: rgba(255,255,255,0.2); } to { border-color: var(--red); box-shadow: 0 0 15px rgba(255,0,0,0.5); } }
+
+  /* RWD 微調 */
+  @media (max-width: 1300px) {
+    .team-name { font-size: 24px; }
+    .vs-divider { font-size: 20px; width: 35px; }
+    .timer { width: 35px; height: 35px; font-size: 16px; }
+    .name-tag { font-size: 12px; padding: 25px 0 4px 0;}
+    .slot.sniped::after { font-size: 22px; }
+  }
+
+  /* --- 英雄池 --- */
+  .pool { flex: 1; background: #0d0d12; border-top: 1px solid var(--border); display: flex; flex-direction: column; padding: 10px 20px; overflow: hidden; position: relative; z-index: 10; }
+  .pool-mask { position: absolute; top: 48px; left: 0; width: 100%; height: calc(100% - 58px); background: rgba(0,0,0,0.7); z-index: 50; display: none; backdrop-filter: grayscale(1); }
+  .pool.disabled .pool-mask { display: block; }
+  .toolbar { display: flex; justify-content: center; gap: 12px; margin-bottom: 10px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
+  .search { background: #14141c; border: 1px solid #3a3a46; color: #fff; padding: 0 14px 0 32px; height: 34px; border-radius: 17px; font-size: 13px; width: 180px; outline: none; transition: 0.25s; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.5' y2='16.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: 12px center; }
+  .search:focus { border-color: #7a7a88; box-shadow: 0 0 0 3px rgba(255,255,255,0.06); width: 200px; }
+  .filter-group { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center; background: rgba(0,0,0,0.25); padding: 4px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); }
+  /* 通用篩選晶片 */
+  .tag { height: 30px; min-width: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid transparent; color: #999; font-size: 12px; font-weight: 700; letter-spacing: 1px; padding: 0 12px; cursor: pointer; border-radius: 15px; transition: 0.2s; }
+  .tag:hover { color: #eee; background: rgba(255,255,255,0.06); }
+  .tag.active { background: #f0f0f0; color: #111; border-color: #f0f0f0; box-shadow: 0 2px 8px rgba(255,255,255,0.18); }
+  /* 星級晶片 */
+  .tag-5star { color: var(--gold); font-size: 17px; padding: 0 11px; }
+  .tag-5star:hover { background: rgba(251,191,36,0.14); color: var(--gold); }
+  .tag-5star.active { background: rgba(251,191,36,0.16); color: var(--gold); border-color: rgba(251,191,36,0.7); box-shadow: 0 0 10px rgba(251,191,36,0.4); }
+  .tag-4star { color: #c084fc; font-size: 17px; padding: 0 11px; }
+  .tag-4star:hover { background: rgba(168,85,247,0.14); color: #c084fc; }
+  .tag-4star.active { background: rgba(168,85,247,0.16); color: #c084fc; border-color: rgba(168,85,247,0.7); box-shadow: 0 0 10px rgba(168,85,247,0.4); }
+  .tag-sep { width: 1px; height: 20px; align-self: center; background: rgba(255,255,255,0.12); margin: 0 2px; }
+  /* 屬性圖標晶片 */
+  .tag-el { padding: 0; width: 32px; min-width: 32px; height: 32px; border-radius: 50%; position: relative; }
+  .tag-el:has(.el-fallback-txt) { width: auto; padding: 0 10px; border-radius: 15px; }
+  .tag-el img { width: 24px; height: 24px; object-fit: contain; transition: 0.2s; }
+  .tag-el:hover { background: transparent; }
+  .tag-el:hover img { transform: scale(1.12); }
+  .tag-el.active { background: transparent; border-color: transparent; box-shadow: none; }
+  .tag-el.active::after { content: ''; position: absolute; inset: -1px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+  .grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 6px; overflow-y: auto; padding-bottom: 10px; align-content: start; }
+  .grid::-webkit-scrollbar { width: 6px; }
+  .grid::-webkit-scrollbar-track { background: #0a0a0a; }
+  .grid::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+  .grid::-webkit-scrollbar-thumb:hover { background: #666; }
+  
+  /* === 3D 閃卡特效 CSS === */
+  .card { 
+      aspect-ratio: 0.85; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; 
+      position: relative; cursor: pointer; overflow: hidden; 
+      transform-style: preserve-3d;
+      transition: transform 0.1s ease, border-color 0.2s, box-shadow 0.2s; 
+  }
+  
+  .card::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgba(255, 255, 255, 0.4) 0%, transparent 60%);
+      opacity: 0; transition: opacity 0.3s; z-index: 5; pointer-events: none; mix-blend-mode: overlay;
+  }
+  
+  .card:hover:not(.disabled) { z-index: 10; border-color: #aaa; box-shadow: 0 10px 20px rgba(0,0,0,0.8); }
+  .card:hover:not(.disabled)::before { opacity: 1; }
+  
+  .card.disabled { pointer-events: none; filter: grayscale(1); transform: none !important; box-shadow: none; opacity: 0.6; }
+  /* ===================== */
+
+  .card.used-blue { border-color: var(--blue); box-shadow: 0 0 10px rgba(59,130,246,0.3); }
+  .card.used-blue::after { content: ''; position: absolute; bottom: 2px; right: 2px; width: 8px; height: 8px; background: var(--blue); border-radius: 50%; box-shadow: 0 0 5px var(--blue); }
+  .card.used-red { border-color: var(--red); box-shadow: 0 0 10px rgba(239,68,68,0.3); }
+  .card.used-red::after { content: ''; position: absolute; bottom: 2px; right: 2px; width: 8px; height: 8px; background: var(--red); border-radius: 50%; box-shadow: 0 0 5px var(--red); }
+  .card.used-ban::after { content: '🚫'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; color: rgba(255,0,0,0.8); text-shadow: 0 0 5px #000; }
+  
+  .card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card-name { position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.9)); font-size: 10px; text-align: center; color: #ddd; padding: 12px 0 2px 0; font-weight: bold; }
+  .card.rarity-5 { border-color: rgba(251,191,36,0.35); }
+  .card.rarity-5 .card-name { color: #fcd34d; background: linear-gradient(transparent, rgba(40,28,0,0.92)); }
+  .card.rarity-4 { border-color: rgba(168,85,247,0.3); }
+  .card.rarity-4 .card-name { color: #d8b4fe; background: linear-gradient(transparent, rgba(30,16,46,0.92)); }
+  .card.rarity-5:hover:not(.disabled) { border-color: var(--gold); }
+  .card.rarity-4:hover:not(.disabled) { border-color: #c084fc; }
+  .dot { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 3px #000; border: 1px solid rgba(255,255,255,0.5); }
+  .c-Fusion { background: #ef4444; } .c-Glacio { background: #3b82f6; } .c-Electro { background: #a855f7; } .c-Aero { background: #10b981; } .c-Spectro { background: #fbbf24; } .c-Havoc { background: #be185d; }
+
+  /* 底部按鈕 */
+  .footer { flex-shrink: 0; display: flex; gap: 12px; justify-content: center; align-items: center; padding: 12px 20px; background: linear-gradient(180deg, #0a0a0f 0%, #050508 100%); border-top: 1px solid var(--border); box-shadow: 0 -4px 15px rgba(0,0,0,0.6); z-index: 100; }
+  .btn { padding: 9px 28px; border-radius: 22px; border: none; cursor: pointer; font-weight: bold; font-size: 14px; letter-spacing: 1px; box-shadow: 0 3px 8px rgba(0,0,0,0.5); transition: 0.2s; white-space: nowrap; line-height: 1; }
+  .btn:hover { transform: scale(1.05); filter: brightness(1.2); }
+  .btn:active { transform: scale(0.95); }
+  .b-timer { background: var(--blue); color: #fff; }
+  .b-timer.off { background: #444; color: #aaa; }
+  .b-undo { background: #444; color: #eee; }
+  .b-copy { background: linear-gradient(45deg, #2563eb, #3b82f6); color: #fff; }
+  .b-red { background: linear-gradient(45deg, #dc2626, #ef4444); color: #fff; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; filter: none; }
+
+  /* 懸浮聊天室 */
+  .chat-toggle { position: fixed; bottom: 70px; right: 20px; z-index: 1000; background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; padding: 10px 20px; border-radius: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.8), 0 0 10px rgba(59,130,246,0.5); transition: 0.3s; border: 1px solid rgba(255,255,255,0.2); }
+  .chat-toggle:hover { transform: translateY(-3px) scale(1.05); }
+  .chat-toggle.has-new::after { content: ''; position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; background: var(--red); border-radius: 50%; border: 2px solid #fff; animation: bounce-dot 1s infinite; }
+  @keyframes bounce-dot { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+  .chat-panel { position: fixed; bottom: 120px; right: 20px; width: 340px; height: 450px; background: rgba(15,15,20,0.95); border: 1px solid #444; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.9); z-index: 999; display: flex; flex-direction: column; overflow: hidden; transform: translateY(20px); opacity: 0; pointer-events: none; transition: 0.3s cubic-bezier(0.25, 1, 0.5, 1); backdrop-filter: blur(10px); }
+  .chat-panel.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .chat-header { background: linear-gradient(90deg, #111, #222); padding: 12px 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 15px; color: #eee; letter-spacing: 1px; }
+  .chat-close { cursor: pointer; color: #888; font-size: 16px; transition: 0.2s; }
+  .chat-close:hover { color: #fff; }
+  .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 13px; font-family: sans-serif; }
+  .chat-messages::-webkit-scrollbar { width: 5px; }
+  .chat-messages::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+  .msg { background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; word-break: break-all; }
+  .msg.system { background: rgba(59,130,246,0.1); color: #93c5fd; text-align: center; font-size: 12px; border: 1px solid rgba(59,130,246,0.2);}
+  .msg b { margin-right: 5px; }
+  .msg.blue b { color: var(--blue); text-shadow: 0 0 5px rgba(59,130,246,0.5); }
+  .msg.red b { color: var(--red); text-shadow: 0 0 5px rgba(239,68,68,0.5); }
+  .msg.referee b { color: var(--gold); text-shadow: 0 0 5px rgba(251,191,36,0.5); }
+  .msg.viewer b { color: #aaa; }
+  .msg.blue { border-left: 3px solid var(--blue); }
+  .msg.red { border-left: 3px solid var(--red); }
+  .msg.referee { border-left: 3px solid var(--gold); }
+  .msg.viewer { border-left: 3px solid #555; }
+  .chat-input-area { padding: 10px; background: #0a0a0f; border-top: 1px solid #333; display: flex; gap: 6px; align-items: center; }
+  .chat-input-area input { flex: 1; background: #1a1a24; border: 1px solid #444; color: #fff; padding: 8px 10px; border-radius: 20px; font-size: 13px; outline: none; transition: 0.3s; }
+  .chat-input-area input:focus { border-color: #777; box-shadow: 0 0 5px rgba(255,255,255,0.1); }
+  .chat-input-area button { background: #333; color: #fff; border: none; padding: 0 15px; height: 32px; border-radius: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 12px; }
+  .chat-input-area button:hover { background: #555; }
+
+  /* === 新增：非阻塞 Toast 提示 === */
+  .toast-wrap { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 5000; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+  .toast { background: rgba(20,20,28,0.95); color: #fff; padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 700; letter-spacing: 1px; border: 1px solid #444; box-shadow: 0 6px 20px rgba(0,0,0,0.7); animation: toast-in 0.25s ease, toast-out 0.3s ease 2.2s forwards; backdrop-filter: blur(6px); }
+  .toast.warn { border-color: var(--red); color: #fca5a5; box-shadow: 0 6px 20px rgba(239,68,68,0.3); }
+  .toast.ok { border-color: #10b981; color: #6ee7b7; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes toast-out { to { opacity: 0; transform: translateY(-10px); } }
+
+  /* === 新增：搜尋無結果提示 === */
+  .grid-empty { grid-column: 1 / -1; text-align: center; color: #555; font-size: 14px; padding: 40px 0; letter-spacing: 1px; }
+
+  /* === 新增：連線狀態徽章 === */
+  .conn-badge { position: fixed; top: 8px; right: 16px; z-index: 1500; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 14px; background: rgba(0,0,0,0.6); border: 1px solid #444; color: #aaa; letter-spacing: 1px; display: none; }
+  .conn-badge.online { color: #6ee7b7; border-color: #10b981; display: block; }
+  .conn-badge.offline { color: #fca5a5; border-color: var(--red); display: block; }
+
+  /* 圖片載入失敗占位 */
+  img.broken { opacity: 0.25; }
+
+  /* === 新增：行動裝置 / 直式 RWD fallback === */
+  @media (max-width: 768px) {
+    .team-col, .team-col.right { transform: none; }
+    .team-info-inner, .team-col.right .team-info-inner { transform: none; }
+    .slot-inner, .team-col.right .slot-inner { width: 100%; margin-left: 0; transform: none; }
+    .slot.sniped::after, .team-col.right .slot.sniped::after { animation: stamp-smash 0.35s cubic-bezier(0.175,0.885,0.32,1.275) forwards; transform: translate(-50%,-50%) rotate(-12deg); }
+    .team-name { font-size: 18px; }
+    :root { --h-stage: 38vh; }
+    .net-split { flex-direction: column; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); }
+    .footer { flex-wrap: wrap; gap: 8px; padding: 8px; }
+    .title { font-size: 18px; letter-spacing: 2px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="conn-badge" id="conn-badge"></div>
+  <div class="toast-wrap" id="toast-wrap"></div>
+
+  <div id="net-overlay" class="net-overlay">
+    <div class="net-box">
+      <div class="net-head">
+        <div class="net-eyebrow">WUTHERING WAVES · TOURNAMENT</div>
+        <h2>鳴潮 BP 賽事系統</h2>
+        <div class="net-sub">建立或加入房間，開始 Ban / Pick</div>
+      </div>
+
+      <div class="identity-section">
+        <div class="sec-label"><span class="sec-no">1</span> 設定暱稱與身分 <span class="required-star">*</span></div>
+        <input type="text" id="my-nickname" class="nickname-input" placeholder="輸入暱稱（必填，將顯示於聊天室）" maxlength="15">
+        <input type="hidden" id="my-role" value="blue">
+        <div class="role-btns">
+          <button type="button" class="role-btn role-blue active" data-role="blue" onclick="selectRole(this)">🔵 藍隊選手</button>
+          <button type="button" class="role-btn role-red" data-role="red" onclick="selectRole(this)">🔴 紅隊選手</button>
+        </div>
+        <p class="sec-note">點擊「建立房間」者，將自動獲得最高權限的「裁判」身分。</p>
+      </div>
+
+      <div class="net-split">
+        <div class="net-card card-host">
+          <img class="card-icon-img" src="phoebe.png" alt="菲比啾比">
+          <h3>建立房間</h3>
+          <span class="card-tag">裁判專用</span>
+          <p>房主即裁判，可管理計時器、Undo，並具任意代點權限。</p>
+          <button class="net-btn net-btn-host" onclick="createRoom()">建立房間</button>
+          <div id="room-code-display" class="room-id-display" style="display:none;"></div>
+        </div>
+        <div class="net-card card-join">
+          <img class="card-icon-img" src="nunu.png" alt="弗糯糯">
+          <h3>加入房間</h3>
+          <span class="card-tag">選手專用</span>
+          <p>選手僅能在輪到自己隊伍的回合，親自點擊選角或破壞。</p>
+          <input type="text" id="join-input" class="room-input" placeholder="0000" maxlength="4" inputmode="numeric">
+          <button class="net-btn net-btn-join" onclick="joinRoom()">加入房間</button>
+        </div>
+      </div>
+
+      <div class="format-section collapsed" id="format-section">
+        <button type="button" class="format-toggle" id="format-toggle" onclick="toggleFormat()">
+          <span><span class="gear">⚙</span> 進階賽制設定<span class="format-hint">（僅建立房間時生效）</span></span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="format-body">
+          <div class="format-row">
+            <div class="mini">
+              <span>BP 流程</span>
+              <div class="select-wrap">
+                <select id="cfg-format">
+                  <option value="standard" selected>標準賽制（各禁1・各選7・各破壞1）</option>
+                  <option value="noSnipe">無破壞賽制（各禁1・各選7）</option>
+                  <option value="quick">快速賽制（各禁1・各選5）</option>
+                </select>
+              </div>
+            </div>
+            <div class="mini">
+              <span>計時器（秒）</span>
+              <div class="select-wrap">
+                <select id="cfg-timer">
+                  <option value="30" selected>30 秒</option>
+                  <option value="45">45 秒</option>
+                  <option value="60">60 秒</option>
+                  <option value="0">關閉計時</option>
+                </select>
+              </div>
+            </div>
+            <div class="mini">
+              <span>超時行為</span>
+              <div class="select-wrap">
+                <select id="cfg-timeout">
+                  <option value="pause" selected>暫停，等待裁判處理</option>
+                  <option value="random">隨機自動選角</option>
+                  <option value="skip">跳過此步驟</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="offline-link" onclick="startOffline()">不要連線，直接單機測試 →</button>
+    </div>
+  </div>
+
+  <div class="header">
+    <button class="back-btn" onclick="backToLobby()" title="返回大廳">
+      <span class="back-arrow">‹</span> 大廳
+    </button>
+    <div class="header-decor"></div>
+    <div class="header-center"><div class="title">WUTHERING BP</div></div>
+    <div class="header-decor right"></div>
+  </div>
+
+  <div class="status-bar" id="status">準備就緒</div>
+
+  <div class="stage-wrapper">
+    <div class="stage">
+      <div class="team-col blue">
+        <div class="team-top">
+          <div class="team-info-inner">
+            <input class="team-name txt-b" id="name-blue" value="BLUE TEAM" oninput="handleNameChange('blue', this.value)">
+            <div class="ban-wrap"><span class="ban-label">BAN</span><div class="ban-box" id="blue-ban-pre" data-name=""><img src=""></div></div> 
+          </div>
+        </div>
+        <div class="pick-row">
+          <div class="slot" id="blue-pick-1"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+          <div class="slot" id="blue-pick-2"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+          <div class="slot prot" id="blue-pick-3"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+          <div class="slot" id="blue-pick-4"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+          <div class="slot" id="blue-pick-5"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+          <div class="slot" id="blue-pick-6"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+          <div class="slot" id="blue-pick-7"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+        </div>
+      </div>
+
+      <div class="vs-divider"><div id="timer" class="timer">30</div><span>VS</span></div>
+
+      <div class="team-col right red">
+        <div class="team-top">
+          <div class="team-info-inner">
+            <input class="team-name txt-r" id="name-red" value="RED TEAM" style="text-align:right;" oninput="handleNameChange('red', this.value)">
+            <div class="ban-wrap"><span class="ban-label">BAN</span><div class="ban-box" id="red-ban-pre" data-name=""><img src=""></div></div>
+          </div>
+        </div>
+        <div class="pick-row">
+          <div class="slot" id="red-pick-1"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+          <div class="slot" id="red-pick-2"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+          <div class="slot prot" id="red-pick-3"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+          <div class="slot" id="red-pick-4"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+          <div class="slot" id="red-pick-5"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+          <div class="slot" id="red-pick-6"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+          <div class="slot" id="red-pick-7"><div class="slot-inner"><img src=""><div class="name-tag">-</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pool" id="pool">
+    <div class="pool-mask" id="pool-mask"></div>
+    <div class="toolbar">
+      <input class="search" id="search" placeholder="搜尋角色..." oninput="renderPool()">
+      <div class="filter-group">
+        <div class="tag active" onclick="filter('all', this)">ALL</div>
+        <div class="tag tag-5star" title="五星" onclick="filter('5star', this)">★</div>
+        <div class="tag tag-4star" title="四星" onclick="filter('4star', this)">★</div>
+        <div class="tag-sep"></div>
+        <div class="tag tag-el" data-el="Glacio" title="冷凝" onclick="filter('Glacio', this)"><img src="./element/Glacio.png" alt="冷凝" data-el="Glacio" onerror="elIconFallback(this)"></div>
+        <div class="tag tag-el" data-el="Fusion" title="熱熔" onclick="filter('Fusion', this)"><img src="./element/Fusion.png" alt="熱熔" data-el="Fusion" onerror="elIconFallback(this)"></div>
+        <div class="tag tag-el" data-el="Electro" title="導電" onclick="filter('Electro', this)"><img src="./element/Electro.png" alt="導電" data-el="Electro" onerror="elIconFallback(this)"></div>
+        <div class="tag tag-el" data-el="Aero" title="氣動" onclick="filter('Aero', this)"><img src="./element/Aero.png" alt="氣動" data-el="Aero" onerror="elIconFallback(this)"></div>
+        <div class="tag tag-el" data-el="Spectro" title="衍射" onclick="filter('Spectro', this)"><img src="./element/Spectro.png" alt="衍射" data-el="Spectro" onerror="elIconFallback(this)"></div>
+        <div class="tag tag-el" data-el="Havoc" title="湮滅" onclick="filter('Havoc', this)"><img src="./element/Havoc.png" alt="湮滅" data-el="Havoc" onerror="elIconFallback(this)"></div>
+      </div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="footer">
+    <button class="btn b-timer" id="btn-timer" onclick="handleTimerClick()" style="display:none;">⏱️ 30秒 (開)</button>
+    <button class="btn b-undo" id="btn-undo" onclick="handleUndoClick()" disabled style="display:none;">上一步</button>
+    <button class="btn b-copy" onclick="copyResult()">複製戰報</button>
+    <button class="btn b-red" id="btn-reset" onclick="handleResetClick()" style="display:none;">重置</button>
+  </div>
+
+  <div class="chat-toggle" id="chat-toggle" onclick="toggleChat()">💬 聊天室</div>
+  <div class="chat-panel" id="chat-panel">
+    <div class="chat-header"><span>賽事聊天室</span><span class="chat-close" onclick="toggleChat()">✖</span></div>
+    <div class="chat-messages" id="chat-messages"><div class="msg system">歡迎來到鳴潮 BP 系統！<br>這裡可以隨時討論戰況。</div></div>
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="說點什麼..." onkeypress="handleChatEnter(event)">
+      <button onclick="sendChatClick()">送出</button>
+    </div>
+  </div>
+
+<script>
+  // 自動將名單結合中文檔名映射到 avatar、portrait 與 audio 資料夾
+  const baseChars = [
+    { id: 'emis', name: '愛彌斯', en: 'Aemis', el: 'Fusion', rarity: 5 },
+    { id: 'luhess', name: '陸·赫斯', en: 'Lu Hess', el: 'Spectro', rarity: 5 },
+    { id: 'lynae', name: '琳奈', en: 'Lynae', el: 'Spectro', rarity: 5 },
+    { id: 'mornye', name: '莫寧', en: 'Mornye', el: 'Fusion', rarity: 5 },
+    { id: 'chisa', name: '千咲', en: 'Chisa', el: 'Havoc', rarity: 5 },
+    { id: 'buling', name: '卜靈', en: 'Buling', el: 'Electro', rarity: 4 },
+    { id: 'qiuyuan', name: '仇遠', en: 'Qiuyuan', el: 'Aero', rarity: 5 },
+    { id: 'galbrena', name: '嘉貝莉娜', en: 'Galbrena', el: 'Fusion', rarity: 5 },
+    { id: 'zani', name: '贊妮', en: 'Zani', el: 'Spectro', rarity: 5 },
+    { id: 'augusta', name: '奧古斯塔', en: 'Augusta', el: 'Electro', rarity: 5 },
+    { id: 'iuno', name: '尤諾', en: 'Iuno', el: 'Aero', rarity: 5 },
+    { id: 'lupa', name: '露帕', en: 'Lupa', el: 'Fusion', rarity: 5 },
+    { id: 'phrolova', name: '弗洛洛', en: 'Phrolova', el: 'Havoc', rarity: 5 },
+    { id: 'cartethyia', name: '卡提希婭', en: 'Cartethyia', el: 'Aero', rarity: 5 },
+    { id: 'ciaccona', name: '夏空', en: 'Ciaccona', el: 'Aero', rarity: 5 },
+    { id: 'cantarella', name: '坎特蕾拉', en: 'Cantarella', el: 'Havoc', rarity: 5 },
+    { id: 'brant', name: '布蘭特', en: 'Brant', el: 'Fusion', rarity: 5 },
+    { id: 'phoebe', name: '菲比', en: 'Phoebe', el: 'Spectro', rarity: 5 },
+    { id: 'carlotta', name: '珂萊塔', en: 'Carlotta', el: 'Glacio', rarity: 5 },
+    { id: 'roccia', name: '洛可可', en: 'Roccia', el: 'Havoc', rarity: 5 },
+    { id: 'camellya', name: '椿', en: 'Camellya', el: 'Havoc', rarity: 5 },
+    { id: 'shorekeeper', name: '守岸人', en: 'Shorekeeper', el: 'Spectro', rarity: 5 },
+    { id: 'xiangliyao', name: '相里要', en: 'Xiangli Yao', el: 'Electro', rarity: 5 },
+    { id: 'zhezhi', name: '折枝', en: 'Zhezhi', el: 'Glacio', rarity: 5 },
+    { id: 'jinhsi', name: '今汐', en: 'Jinhsi', el: 'Spectro', rarity: 5 },
+    { id: 'changli', name: '長離', en: 'Changli', el: 'Fusion', rarity: 5 },
+    { id: 'jiyan', name: '忌炎', en: 'Jiyan', el: 'Aero', rarity: 5 },
+    { id: 'yinlin', name: '吟霖', en: 'Yinlin', el: 'Electro', rarity: 5 },
+    { id: 'verina', name: '維里奈', en: 'Verina', el: 'Spectro', rarity: 5 },
+    { id: 'calcharo', name: '卡卡羅', en: 'Calcharo', el: 'Electro', rarity: 5 },
+    { id: 'encore', name: '安可', en: 'Encore', el: 'Fusion', rarity: 5 },
+    { id: 'jianxin', name: '鑑心', en: 'Jianxin', el: 'Aero', rarity: 5 },
+    { id: 'lingyang', name: '凌陽', en: 'Lingyang', el: 'Glacio', rarity: 5 },
+    { id: 'lumi', name: '燈燈', en: 'Lumi', el: 'Electro', rarity: 4 },
+    { id: 'youhu', name: '釉瑚', en: 'Youhu', el: 'Glacio', rarity: 4 },
+    { id: 'danjin', name: '丹瑾', en: 'Danjin', el: 'Havoc', rarity: 4 },
+    { id: 'mortefi', name: '莫特斐', en: 'Mortefi', el: 'Fusion', rarity: 4 },
+    { id: 'sanhua', name: '散華', en: 'Sanhua', el: 'Glacio', rarity: 4 },
+    { id: 'chixia', name: '熾霞', en: 'Chixia', el: 'Fusion', rarity: 4 },
+    { id: 'baizhi', name: '白芷', en: 'Baizhi', el: 'Glacio', rarity: 4 },
+    { id: 'yangyang', name: '秧秧', en: 'Yangyang', el: 'Aero', rarity: 4 },
+    { id: 'aalto', name: '秋水', en: 'Aalto', el: 'Aero', rarity: 4 },
+    { id: 'yuanwu', name: '淵武', en: 'Yuanwu', el: 'Electro', rarity: 4 },
+    { id: 'taoqi', name: '桃祈', en: 'Taoqi', el: 'Havoc', rarity: 4 },
+    { id: 'sigrlinn', name: '西格莉卡', en: 'Sigrlinn', el: 'Aero', rarity: 5 },
+    { id: 'feixue', name: '緋雪', en: 'Feixue', el: 'Glacio', rarity: 5 },
+    { id: 'danya', name: '達妮婭', en: 'Danya', el: 'Fusion', rarity: 5 },
+    { id: 'lucy', name: '露西', en: 'Lucy', el: 'Spectro', rarity: 5 },
+    { id: 'rebecca', name: '麗貝卡', en: 'Rebecca', el: 'Electro', rarity: 5 },
+    { id: 'losera', name: '洛瑟菈', en: 'Losera', el: 'Glacio', rarity: 5 },
+    { id: 'rover_spectro_m', name: '漂泊者·衍射', en: 'Rover (Spectro)', el: 'Spectro', rarity: 5, fileName: '漂泊者(男)' },
+    { id: 'rover_havoc_f', name: '漂泊者·湮滅', en: 'Rover (Havoc)', el: 'Havoc', rarity: 5, fileName: '漂泊者(女)' },
+    { id: 'rover_aero_m', name: '漂泊者·氣動', en: 'Rover (Aero)', el: 'Aero', rarity: 5, fileName: '漂泊者(男)' },
+    { id: 'jingran', name: '景燃', en: 'Jingran', el: 'Fusion', rarity: 5 },
+    { id: 'qingxiao', name: '清宵', en: 'Qingxiao', el: 'Aero', rarity: 5 },
+    { id: 'suisui', name: '穗穗', en: 'Suisui', el: 'Glacio', rarity: 5 },
+    { id: 'xuanling', name: '玄翎', en: 'Xuanling', el: 'Havoc', rarity: 5 }
+  ];
+
+  // 三路徑自動對應邏輯 (頭像、立繪、語音)
+  // 每項提供多種副檔名候選，載入失敗會自動往下試（見 tryNextSrc / playVoice）
+  const chars = baseChars.map(c => {
+    const file = c.fileName || c.name;
+    return {
+      ...c,
+      rarity: c.rarity || 5,   // 未標註者預設五星
+      img: `./avatar/${file}.webp`,
+      imgList: [`./avatar/${file}.webp`, `./avatar/${file}.png`, `./avatar/${file}.jpg`, `./avatar/${file}.jpeg`],
+      portrait: `./portrait/${file}.webp`,
+      portraitList: [`./portrait/${file}.webp`, `./portrait/${file}.png`, `./portrait/${file}.jpg`, `./portrait/${file}.jpeg`],
+      audio: `./audio/${file}.mp3`,
+      audioList: [`./audio/${file}.mp3`, `./audio/${file}.wav`, `./audio/${file}.ogg`, `./audio/${file}.m4a`]
+    };
+  });
+
+  // 自訂置頂順序（這幾個排在最前面），其餘維持名單原順序
+  const PINNED_ORDER = ['jingran', 'qingxiao', 'suisui', 'xuanling', 'losera', 'rebecca', 'lucy', 'danya', 'feixue', 'sigrlinn'];
+  chars.sort((a, b) => {
+    const pa = PINNED_ORDER.indexOf(a.id);
+    const pb = PINNED_ORDER.indexOf(b.id);
+    // 兩者皆在置頂清單：照清單順序
+    if (pa !== -1 && pb !== -1) return pa - pb;
+    // 只有一個在置頂清單：置頂者優先
+    if (pa !== -1) return -1;
+    if (pb !== -1) return 1;
+    // 都不在置頂清單：五星靠前、四星靠後（同星級維持原順序）
+    return b.rarity - a.rarity;
+  });
+  const charById = Object.fromEntries(chars.map(c => [c.id, c]));
+
+  // ====== 賽制定義（可由裁判選擇）======
+  // 每個 step：t=ban|pick|snipe, team=blue|red, id=對應格子（pick/ban）, target=被破壞隊（snipe）
+  // prot: 該 pick 格是否受保護（破壞階段不可選）
+  function buildSteps(format) {
+    const base = [
+      { t: 'ban', team: 'blue', id: 'blue-ban-pre' }, { t: 'ban', team: 'red', id: 'red-ban-pre' },
+      { t: 'pick', team: 'blue', id: 'blue-pick-1' }, { t: 'pick', team: 'red', id: 'red-pick-1' },
+      { t: 'pick', team: 'red', id: 'red-pick-2' }, { t: 'pick', team: 'blue', id: 'blue-pick-2' },
+      { t: 'pick', team: 'blue', id: 'blue-pick-3' }, { t: 'pick', team: 'red', id: 'red-pick-3' },
+      { t: 'pick', team: 'red', id: 'red-pick-4' }, { t: 'pick', team: 'blue', id: 'blue-pick-4' },
+      { t: 'pick', team: 'blue', id: 'blue-pick-5' }, { t: 'pick', team: 'red', id: 'red-pick-5' },
+      { t: 'pick', team: 'red', id: 'red-pick-6' }, { t: 'pick', team: 'blue', id: 'blue-pick-6' },
+      { t: 'pick', team: 'blue', id: 'blue-pick-7' }, { t: 'pick', team: 'red', id: 'red-pick-7' },
+    ];
+    const snipe = [
+      { t: 'snipe', team: 'blue', target: 'red' }, { t: 'snipe', team: 'red', target: 'blue' }
+    ];
+    if (format === 'noSnipe') return base;
+    if (format === 'quick') {
+      return [
+        { t: 'ban', team: 'blue', id: 'blue-ban-pre' }, { t: 'ban', team: 'red', id: 'red-ban-pre' },
+        { t: 'pick', team: 'blue', id: 'blue-pick-1' }, { t: 'pick', team: 'red', id: 'red-pick-1' },
+        { t: 'pick', team: 'red', id: 'red-pick-2' }, { t: 'pick', team: 'blue', id: 'blue-pick-2' },
+        { t: 'pick', team: 'blue', id: 'blue-pick-3' }, { t: 'pick', team: 'red', id: 'red-pick-3' },
+        { t: 'pick', team: 'red', id: 'red-pick-4' }, { t: 'pick', team: 'blue', id: 'blue-pick-4' },
+        { t: 'pick', team: 'blue', id: 'blue-pick-5' }, { t: 'pick', team: 'red', id: 'red-pick-5' },
+      ];
+    }
+    return base.concat(snipe);
+  }
+
+  // 受保護的 pick 格（第 3 picks）。可依賽制調整，這裡沿用原規則。
+  const PROTECTED_SLOTS = new Set(['blue-pick-3', 'red-pick-3']);
+
+  // ====== 集中式狀態 ======
+  const state = {
+    format: 'standard',
+    steps: buildSteps('standard'),
+    stepIdx: 0,
+    history: [],            // [{ type:'pool'|'snipe', step, cid?, slotId }]
+    used: new Set(),        // 已使用角色 id（ban+pick）
+    blueName: 'BLUE TEAM',
+    redName: 'RED TEAM',
+    timerDuration: 30,      // 0 = 關閉
+    timerEnabled: true,
+    timeoutMode: 'pause',   // pause | random | skip
+    turnStartAt: 0,         // host 廣播的本回合開始時間戳（毫秒）
+  };
+
+  let filterType = 'all';
+
+  // ====== 身分與連線 ======
+  let myRole = 'blue';        // referee | blue | red | viewer（viewer 僅在同隊已有人時自動降級）
+  let myNickname = '路人';
+
+  // 身分按鈕選擇
+  function selectRole(btn) {
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('my-role').value = btn.dataset.role;
+  }
+  let peer = null, isHost = false, hostConn = null;
+  const connections = [];     // host 端：每項 { conn, role, nickname }
+
+  function getRoleDisplayName(role) {
+    if (role === 'referee') return "⚖️ 裁判";
+    if (role === 'blue') return "🔵 藍隊";
+    if (role === 'red') return "🔴 紅隊";
+    return "👀 觀眾";
+  }
+
+  // ====== 安全工具：HTML escape，防止聊天室/隊名 XSS ======
+  function esc(str) {
+    return String(str ?? '').replace(/[&<>"']/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+  }
+
+  // ====== Toast（取代 alert）======
+  function toast(msg, kind) {
+    const wrap = document.getElementById('toast-wrap');
+    const el = document.createElement('div');
+    el.className = 'toast' + (kind ? ' ' + kind : '');
+    el.textContent = msg;
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+  }
+
+  function setConnBadge(text, cls) {
+    const b = document.getElementById('conn-badge');
+    b.textContent = text;
+    b.className = 'conn-badge ' + (cls || '');
+  }
+
+  // ====== 音效快取 + 預載 ======
+  const audioCache = {};
+  function getAudio(src) {
+    if (!audioCache[src]) {
+      const a = new Audio(src);
+      a.preload = 'auto';
+      audioCache[src] = a;
+    }
+    return audioCache[src];
+  }
+
+  // 語音不重疊 + 多格式自動嘗試：播新的前先停掉正在播的那個
+  let currentVoice = null;
+  function playVoice(srcOrList) {
+    if (!srcOrList) return;
+    const list = Array.isArray(srcOrList) ? srcOrList.slice() : [srcOrList];
+    if (currentVoice) {
+      try { currentVoice.pause(); currentVoice.currentTime = 0; } catch (e) {}
+    }
+    const tryNext = () => {
+      if (!list.length) return;
+      const src = list.shift();
+      const a = getAudio(src);
+      currentVoice = a;
+      a.currentTime = 0;
+      // 若這個檔載入失敗，換下一個候選格式
+      a.onerror = () => { if (list.length) tryNext(); };
+      a.play().catch(() => { if (list.length) tryNext(); });
+    };
+    tryNext();
+  }
+
+  // Ban 音效：Web Audio 合成低沉震撼的「封禁重擊」聲，不需音檔
+  let _actx = null;
+  function playBanSound() {
+    try {
+      _actx = _actx || new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = _actx;
+      if (ctx.state === 'suspended') ctx.resume();
+      const now = ctx.currentTime;
+
+      // 主低頻爆震（深沉下墜）
+      const sub = ctx.createOscillator();
+      const subG = ctx.createGain();
+      sub.type = 'sine';
+      sub.frequency.setValueAtTime(120, now);
+      sub.frequency.exponentialRampToValueAtTime(32, now + 0.5);
+      subG.gain.setValueAtTime(0.0001, now);
+      subG.gain.exponentialRampToValueAtTime(0.9, now + 0.03);
+      subG.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+      sub.connect(subG).connect(ctx.destination);
+      sub.start(now); sub.stop(now + 1.0);
+
+      // 中頻粗糙質感（增加「震撼」的厚度）
+      const body = ctx.createOscillator();
+      const bodyG = ctx.createGain();
+      body.type = 'sawtooth';
+      body.frequency.setValueAtTime(90, now);
+      body.frequency.exponentialRampToValueAtTime(40, now + 0.35);
+      bodyG.gain.setValueAtTime(0.0001, now);
+      bodyG.gain.exponentialRampToValueAtTime(0.4, now + 0.02);
+      bodyG.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+      const bodyLP = ctx.createBiquadFilter();
+      bodyLP.type = 'lowpass';
+      bodyLP.frequency.setValueAtTime(400, now);
+      body.connect(bodyLP).connect(bodyG).connect(ctx.destination);
+      body.start(now); body.stop(now + 0.7);
+
+      // 爆破雜訊（撞擊瞬間的衝擊感）
+      const noiseLen = Math.floor(ctx.sampleRate * 0.25);
+      const noiseBuf = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+      const nd = noiseBuf.getChannelData(0);
+      for (let i = 0; i < noiseLen; i++) nd[i] = (Math.random() * 2 - 1) * (1 - i / noiseLen);
+      const noise = ctx.createBufferSource();
+      noise.buffer = noiseBuf;
+      const noiseG = ctx.createGain();
+      noiseG.gain.setValueAtTime(0.5, now);
+      noiseG.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+      const noiseLP = ctx.createBiquadFilter();
+      noiseLP.type = 'lowpass';
+      noiseLP.frequency.setValueAtTime(900, now);
+      noise.connect(noiseLP).connect(noiseG).connect(ctx.destination);
+      noise.start(now); noise.stop(now + 0.25);
+    } catch (e) {}
+  }
+
+  // 屬性圖標：若載入失敗，依序嘗試其他副檔名與大小寫，全部失敗才放棄
+  function elIconFallback(img) {
+    const el = img.dataset.el;
+    const tries = img._elTries || (img._elTries = [
+      `./element/${el}.webp`,
+      `./element/${el}.jpg`,
+      `./element/${el}.jpeg`,
+      `./element/${el.toLowerCase()}.png`,
+      `./element/${el.toLowerCase()}.webp`,
+      `./element/${el.toLowerCase()}.jpg`,
+    ]);
+    if (tries.length) {
+      img.src = tries.shift();
+    } else {
+      // 全部找不到：改用文字後備，避免破圖
+      img.onerror = null;
+      img.style.display = 'none';
+      const parent = img.parentElement;
+      if (parent && !parent.querySelector('.el-fallback-txt')) {
+        const span = document.createElement('span');
+        span.className = 'el-fallback-txt';
+        span.textContent = img.alt || el;
+        span.style.cssText = 'font-size:11px;color:#aaa;white-space:nowrap;';
+        parent.appendChild(span);
+      }
+    }
+  }
+
+  // 角色圖（頭像/立繪）：依候選清單自動嘗試多種副檔名，全失敗才標記破圖
+  function setImgWithFallback(img, list) {
+    const tries = (list || []).slice();
+    img.onerror = () => {
+      if (tries.length) {
+        img.src = tries.shift();
+      } else {
+        img.onerror = null;
+        img.classList.add('broken');
+      }
+    };
+    if (tries.length) {
+      img.classList.remove('broken');
+      img.src = tries.shift();
+    }
+  }
+
+  function roleCanActNow(role) {
+    if (state.stepIdx >= state.steps.length) return false;
+    if (role === 'referee') return true;
+    if (role === 'viewer') return false;
+    return state.steps[state.stepIdx].team === role;
+  }
+
+  function applyHostUI(host) {
+    ['btn-timer', 'btn-undo', 'btn-reset'].forEach(id => {
+      document.getElementById(id).style.display = host ? 'block' : 'none';
+    });
+    document.getElementById('name-blue').readOnly = !host;
+    document.getElementById('name-red').readOnly = !host;
+  }
+
+  // ====== 連線：建立房間（裁判 / 房主）======
+  // 暱稱必填校驗：空則提示並高亮，回傳 null
+  function requireNickname() {
+    const el = document.getElementById('my-nickname');
+    const name = el.value.trim();
+    if (!name) {
+      toast('請先輸入暱稱', 'warn');
+      el.classList.add('input-error');
+      el.focus();
+      setTimeout(() => el.classList.remove('input-error'), 1500);
+      return null;
+    }
+    return name;
+  }
+
+  function createRoom() {
+    const inputName = requireNickname();
+    if (!inputName) return;
+    myNickname = inputName;
+    myRole = 'referee';
+
+    // 讀取賽制設定
+    state.format = document.getElementById('cfg-format').value;
+    state.steps = buildSteps(state.format);
+    const td = parseInt(document.getElementById('cfg-timer').value, 10);
+    state.timerDuration = td;
+    state.timerEnabled = td > 0;
+    state.timeoutMode = document.getElementById('cfg-timeout').value;
+    timeLeft = state.timerDuration;
+
+    const roomId = 'BP' + Math.floor(1000 + Math.random() * 9000);
+    peer = new Peer(roomId);
+
+    peer.on('open', (id) => {
+      const disp = document.getElementById('room-code-display');
+      disp.textContent = id.replace('BP', '');
+      disp.style.display = 'block';
+      setTimeout(() => { document.getElementById('net-overlay').style.display = 'none'; }, 2200);
+      isHost = true; applyHostUI(true);
+      setConnBadge('房主在線 · ' + id, 'online');
+      document.getElementById('status').textContent = `房主控制中 | 房間代碼: ${id.replace('BP','')}`;
+      pushSystemMsg(`${myNickname}（${getRoleDisplayName(myRole)}）建立了房間`);
+      applyFormatToBoard();
+      render();
+    });
+
+    peer.on('error', (err) => { toast('連線錯誤：' + (err.type || ''), 'warn'); });
+
+    peer.on('connection', (conn) => {
+      conn.on('open', () => {
+        // 等待對方送來 hello 取得身分，再正式記錄
+      });
+      conn.on('data', (data) => onHostReceive(conn, data));
+      conn.on('close', () => onGuestLeave(conn));
+    });
+  }
+
+  // host 收到 guest 封包：先做權威驗證再執行/廣播
+  function onHostReceive(conn, data) {
+    if (data.type === 'hello') {
+      // 註冊 guest 身分；同隊只允許一人「操作位」，多餘者降為觀眾
+      let role = data.role;
+      if ((role === 'blue' || role === 'red') &&
+          connections.some(x => x.role === role)) {
+        role = 'viewer';
+        conn.send({ type: 'role-demoted', reason: `${role} 已有選手，您將以觀眾身分加入` });
+      }
+      connections.push({ conn, role, nickname: data.nickname });
+      // 回送目前完整狀態
+      conn.send(buildSyncPayload());
+      pushSystemMsg(`${data.nickname}（${getRoleDisplayName(role)}）進入了房間`);
+      broadcastChatToOthers(conn, 'system', '系統', `${data.nickname}（${getRoleDisplayName(role)}）進入了房間`);
+      return;
+    }
+
+    const entry = connections.find(x => x.conn === conn);
+    const senderRole = entry ? entry.role : 'viewer';
+
+    if (data.type === 'chat') {
+      // 聊天：以伺服器記錄的身分為準，忽略 guest 自報
+      executeChatMsg(senderRole, data.roleName, data.text);
+      broadcastChatToOthers(conn, senderRole, data.roleName, data.text);
+      return;
+    }
+
+    // 操作類：referee 專屬動作
+    if (['undo', 'timer', 'soft-reset', 'name-change'].includes(data.type)) {
+      if (senderRole !== 'referee') { return; } // 非裁判無權，靜默丟棄
+      applyAuthoritativeAction(data);
+      return;
+    }
+
+    // pool / snipe：必須輪到該隊
+    if (data.type === 'pool' || data.type === 'snipe') {
+      if (!roleCanActNow(senderRole)) return;          // 不是你的回合
+      if (!validateAction(data)) return;               // 內容合法性
+      applyAuthoritativeAction(data);
+      return;
+    }
+  }
+
+  function onGuestLeave(conn) {
+    const idx = connections.findIndex(x => x.conn === conn);
+    if (idx >= 0) {
+      const left = connections[idx];
+      connections.splice(idx, 1);
+      pushSystemMsg(`${left.nickname}（${getRoleDisplayName(left.role)}）已離線`);
+      broadcastChat('system', '系統', `${left.nickname} 已離線`);
+    }
+  }
+
+  // host：執行權威動作並廣播權威狀態（不信任 guest 的本地預演）
+  function applyAuthoritativeAction(data) {
+    applyActionToState(data);
+    render();
+    // 廣播完整權威狀態，確保所有端一致（避免競態 / 不同步）
+    const payload = buildSyncPayload();
+    connections.forEach(x => { if (x.conn.open) x.conn.send(payload); });
+  }
+
+  // 校驗 action 內容是否合法（防偽造封包）
+  function validateAction(data) {
+    const s = state.steps[state.stepIdx];
+    if (data.type === 'pool') {
+      if (s.t === 'snipe') return false;
+      const c = charById[data.cid];
+      if (!c || state.used.has(c.id)) return false;
+      return true;
+    }
+    if (data.type === 'snipe') {
+      if (s.t !== 'snipe') return false;
+      if (!data.slotId.startsWith(s.target)) return false;
+      if (PROTECTED_SLOTS.has(data.slotId)) return false;
+      const h = state.history.find(x => x.slotId === data.slotId && x.type === 'pool');
+      const already = state.history.some(x => x.slotId === data.slotId && x.type === 'snipe');
+      return !!h && !already;
+    }
+    return true;
+  }
+
+  // ====== 連線：加入房間（選手 / 觀眾）======
+  function joinRoom() {
+    const inputName = requireNickname();
+    if (!inputName) return;
+    myNickname = inputName;
+    myRole = document.getElementById('my-role').value;
+
+    const raw = document.getElementById('join-input').value.trim().replace(/\D/g, '');
+    if (raw.length !== 4) { toast('請輸入正確的 4 碼數字', 'warn'); return; }
+    const id = 'BP' + raw;
+
+    peer = new Peer();
+    peer.on('open', () => {
+      hostConn = peer.connect(id);
+      hostConn.on('open', () => {
+        document.getElementById('net-overlay').style.display = 'none';
+        isHost = false; applyHostUI(false);
+        setConnBadge('已連線 · ' + getRoleDisplayName(myRole), 'online');
+        document.getElementById('status').textContent = `已連線 | 身分: ${getRoleDisplayName(myRole)}`;
+        // 送 hello 告知身分與暱稱
+        hostConn.send({ type: 'hello', role: myRole, nickname: myNickname });
+      });
+      hostConn.on('data', (data) => onGuestReceive(data));
+      hostConn.on('close', () => {
+        setConnBadge('與房主斷線', 'offline');
+        toast('與房主的連線已中斷，請重新整理重連', 'warn');
+      });
+      hostConn.on('error', () => { toast('找不到該房間，請確認代碼', 'warn'); });
+    });
+    peer.on('error', () => { toast('連線失敗，請確認代碼或網路', 'warn'); });
+  }
+
+  // guest 收到 host 封包
+  function onGuestReceive(data) {
+    if (data.type === 'sync') { applySync(data); return; }
+    if (data.type === 'chat') { executeChatMsg(data.role, data.roleName, data.text); return; }
+    if (data.type === 'role-demoted') { myRole = 'viewer'; toast(data.reason, 'warn'); setConnBadge('已連線 · ' + getRoleDisplayName(myRole), 'online'); return; }
+  }
+
+  // ====== 單機測試 ======
+  function startOffline() {
+    const inputName = document.getElementById('my-nickname').value.trim();
+    myNickname = inputName || "單機測試"; myRole = 'referee';
+    state.format = document.getElementById('cfg-format').value;
+    state.steps = buildSteps(state.format);
+    const td = parseInt(document.getElementById('cfg-timer').value, 10);
+    state.timerDuration = td; state.timerEnabled = td > 0;
+    state.timeoutMode = document.getElementById('cfg-timeout').value;
+    timeLeft = state.timerDuration;
+    document.getElementById('net-overlay').style.display = 'none';
+    isHost = true; applyHostUI(true);
+    setConnBadge('單機測試', 'online');
+    document.getElementById('status').textContent = `單機測試模式`;
+    applyFormatToBoard();
+    render();
+  }
+
+  // ====== 動作分派 ======
+  // 本機操作的統一入口：host 直接執行並廣播；guest 只送給 host（不本地預演，避免競態）
+  function dispatch(action) {
+    if (isHost) {
+      // host 即裁判：本機操作直接走權威路徑（但仍做基本驗證）
+      if (action.type === 'pool' || action.type === 'snipe') {
+        if (!roleCanActNow('referee') && !roleCanActNow(myRole)) return;
+        if (!validateAction(action)) return;
+      }
+      applyAuthoritativeAction(action);
+    } else {
+      if (hostConn && hostConn.open) hostConn.send(action);
+      else toast('尚未連線', 'warn');
+    }
+  }
+
+  // 將 action 應用到 state（純狀態變更，不碰 DOM）
+  function applyActionToState(action) {
+    const s = state.steps[state.stepIdx];
+    switch (action.type) {
+      case 'pool': {
+        const c = charById[action.cid];
+        if (!c) return;
+        state.used.add(c.id);
+        state.history.push({ type: 'pool', step: state.stepIdx, cid: c.id, slotId: s.id });
+        if (s.t === 'pick' && (c.audioList || c.audio)) playVoice(c.audioList || c.audio);
+        state.stepIdx++;
+        break;
+      }
+      case 'snipe': {
+        state.history.push({ type: 'snipe', step: state.stepIdx, slotId: action.slotId });
+        state.stepIdx++;
+        break;
+      }
+      case 'undo': {
+        if (state.history.length === 0) return;
+        const last = state.history.pop();
+        state.stepIdx = last.step;
+        if (last.type === 'pool') state.used.delete(last.cid);
+        break;
+      }
+      case 'timer': {
+        state.timerEnabled = !state.timerEnabled;
+        break;
+      }
+      case 'name-change': {
+        if (action.team === 'blue') state.blueName = action.name;
+        else state.redName = action.name;
+        break;
+      }
+      case 'soft-reset': {
+        state.stepIdx = 0; state.history = []; state.used.clear();
+        state.timerEnabled = state.timerDuration > 0;
+        timeLeft = state.timerDuration;
+        executeChatMsg('system', '系統', '裁判已重置 BP 畫面，進入下一局！');
+        break;
+      }
+      case 'skip':
+      case 'snipe-skip': {
+        state.history.push({ type: action.type, step: state.stepIdx, slotId: null });
+        state.stepIdx++;
+        break;
+      }
+    }
+  }
+
+  // ====== 同步封包 ======
+  function buildSyncPayload() {
+    return {
+      type: 'sync',
+      format: state.format,
+      stepIdx: state.stepIdx,
+      history: state.history,
+      blueName: state.blueName,
+      redName: state.redName,
+      timerDuration: state.timerDuration,
+      timerEnabled: state.timerEnabled,
+      timeoutMode: state.timeoutMode,
+      timeLeft: timeLeft,
+      turnStartAt: state.turnStartAt,
+    };
+  }
+
+  function applySync(data) {
+    state.format = data.format;
+    state.steps = buildSteps(data.format);
+    state.stepIdx = data.stepIdx;
+    state.history = data.history;
+    state.blueName = data.blueName;
+    state.redName = data.redName;
+    state.timerDuration = data.timerDuration;
+    state.timerEnabled = data.timerEnabled;
+    state.timeoutMode = data.timeoutMode;
+    state.turnStartAt = data.turnStartAt;
+    state.used = new Set(state.history.filter(h => h.type === 'pool').map(h => h.cid));
+    // guest 端計時：以 host 廣播的開始時間戳推算，確保同步
+    if (state.timerEnabled && state.turnStartAt) {
+      const elapsed = Math.floor((Date.now() - state.turnStartAt) / 1000);
+      timeLeft = Math.max(0, state.timerDuration - elapsed);
+    } else {
+      timeLeft = data.timeLeft;
+    }
+    applyFormatToBoard();
+    render();
+  }
+
+  // ====== 根據賽制顯示 / 隱藏多餘格子與保護盾 ======
+  function applyFormatToBoard() {
+    const usedSlotIds = new Set(state.steps.filter(s => s.id).map(s => s.id));
+    ['blue', 'red'].forEach(team => {
+      for (let i = 1; i <= 7; i++) {
+        const el = document.getElementById(`${team}-pick-${i}`);
+        if (!el) continue;
+        el.style.display = usedSlotIds.has(`${team}-pick-${i}`) ? '' : 'none';
+        // 保護位樣式（金邊由 .prot 類別驅動）
+        const isProt = PROTECTED_SLOTS.has(`${team}-pick-${i}`);
+        el.classList.toggle('prot', isProt);
+      }
+    });
+  }
+
+  // ====== 集中渲染：所有狀態變更後只走這一條路徑 ======
+  function render() {
+    renderBoard();
+    renderPool();
+    renderStatusBar();
+    document.getElementById('name-blue').value = state.blueName;
+    document.getElementById('name-red').value = state.redName;
+    const undoBtn = document.getElementById('btn-undo');
+    if (undoBtn) undoBtn.disabled = (state.history.length === 0);
+    updateTimerBtn();
+    startTimer();
+  }
+
+  // 依 history 重畫整個棋盤（冪等，sync/undo/reset 共用）
+  function renderBoard() {
+    document.querySelectorAll('.slot, .ban-box').forEach(el => {
+      el.classList.remove('filled', 'sniped', 'active', 'valid-target');
+      el.dataset.charName = '';
+      delete el.dataset.cid;
+      const img = el.querySelector('img');
+      if (img) { img.src = ''; img.classList.remove('broken'); }
+      const overlay = el.querySelector('.ban-overlay');
+      if (overlay) overlay.remove();
+      const tag = el.querySelector('.name-tag');
+      if (tag) tag.textContent = '-';
+    });
+
+    state.history.forEach(h => {
+      const el = document.getElementById(h.slotId);
+      if (!el) return;
+      if (h.type === 'pool') {
+        const c = charById[h.cid];
+        if (!c) return;
+        el.dataset.charName = c.name;
+        el.dataset.cid = c.id;
+        const stepDef = state.steps[h.step];
+        const img = el.querySelector('img');
+        if (stepDef && stepDef.t === 'ban') {
+          setImgWithFallback(img, c.imgList);
+        } else {
+          setImgWithFallback(img, c.portraitList);
+          const tag = el.querySelector('.name-tag');
+          if (tag) tag.textContent = c.name;
+        }
+        el.classList.add('filled');
+      } else if (h.type === 'snipe') {
+        el.classList.add('sniped');
+      }
+    });
+  }
+
+  function renderStatusBar() {
+    const bar = document.getElementById('status');
+    const pool = document.getElementById('pool');
+    pool.classList.remove('pool-dimmed');
+
+    if (state.stepIdx >= state.steps.length) {
+      bar.textContent = "BP 完成";
+      bar.className = "status-bar done";
+      pool.classList.add('disabled');
+      return;
+    }
+    pool.classList.remove('disabled');
+    const s = state.steps[state.stepIdx];
+
+    if (s.t === 'snipe') {
+      bar.textContent = `${s.team.toUpperCase()} 破壞階段 - 點擊對手角色`;
+      bar.className = "status-bar snipe";
+      pool.classList.add('disabled');
+      document.querySelectorAll(`[id^='${s.target}-pick']`).forEach(el => {
+        if (!PROTECTED_SLOTS.has(el.id) && el.classList.contains('filled')) {
+          const already = state.history.some(x => x.slotId === el.id && x.type === 'snipe');
+          if (!already) el.classList.add('valid-target');
+        }
+      });
+    } else {
+      bar.textContent = `${s.team.toUpperCase()} ${s.t === 'ban' ? '禁用' : '選擇'}`;
+      bar.className = `status-bar ${s.team}`;
+      const slot = document.getElementById(s.id);
+      if (slot) slot.classList.add('active');
+    }
+  }
+
+  // ====== 計時器（host 主控，廣播時間戳供 guest 同步）======
+  let timerInterval = null;
+  let timeLeft = 30;
+
+  function startTimer() {
+    clearInterval(timerInterval);
+    const timerEl = document.getElementById('timer');
+    if (state.stepIdx >= state.steps.length) { timerEl.textContent = "--"; timerEl.classList.remove('warning'); return; }
+    if (!state.timerEnabled) { timerEl.textContent = "∞"; timerEl.classList.remove('warning'); return; }
+
+    // host 在每次進入新回合時設定 turnStartAt 並廣播
+    if (isHost) {
+      state.turnStartAt = Date.now();
+      timeLeft = state.timerDuration;
+    }
+    timerEl.textContent = timeLeft;
+    timerEl.classList.toggle('warning', timeLeft <= 5);
+
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      timerEl.textContent = timeLeft;
+      timerEl.classList.toggle('warning', timeLeft <= 5);
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        if (isHost) handleTimeout();
+      }
+    }, 1000);
+  }
+
+  // 超時行為：依裁判設定
+  function handleTimeout() {
+    if (state.stepIdx >= state.steps.length) return;
+    const mode = state.timeoutMode;
+    if (mode === 'pause') {
+      toast('時間到，等待裁判處理', 'warn');
+      pushSystemMsg('⏰ 時間到，等待裁判操作');
+      return;
+    }
+    if (mode === 'skip') {
+      const s = state.steps[state.stepIdx];
+      // 跳過：snipe 直接過；pick/ban 也視為放棄該步
+      applyAuthoritativeAction({ type: s.t === 'snipe' ? 'snipe-skip' : 'skip' });
+      return;
+    }
+    // random
+    const s = state.steps[state.stepIdx];
+    if (s.t === 'snipe') {
+      const targets = [...document.querySelectorAll('.valid-target')];
+      if (targets.length) applyAuthoritativeAction({ type: 'snipe', slotId: targets[Math.floor(Math.random() * targets.length)].id });
+      else applyAuthoritativeAction({ type: 'snipe-skip' });
+    } else {
+      const avail = chars.filter(c => !state.used.has(c.id));
+      if (avail.length) applyAuthoritativeAction({ type: 'pool', cid: avail[Math.floor(Math.random() * avail.length)].id });
+    }
+  }
+
+  // ====== 使用者互動入口 ======
+  // 觀眾 / 非當前回合：以 toast 提示，不再用 alert
+  function preCheckLocal() {
+    if (state.stepIdx >= state.steps.length) return false;
+    if (isHost || myRole === 'referee') return true;
+    if (myRole === 'viewer') { toast('觀眾無法操作，請透過聊天室交流', 'warn'); return false; }
+    if (state.steps[state.stepIdx].team === myRole) return true;
+    const t = state.steps[state.stepIdx].team;
+    toast(`還沒輪到你！現在是${t === 'blue' ? '藍隊' : '紅隊'}回合`, 'warn');
+    return false;
+  }
+
+  function onPoolClick(c) {
+    if (!preCheckLocal()) return;
+    if (state.steps[state.stepIdx].t === 'snipe') return;
+    if (state.used.has(c.id)) return;
+    dispatch({ type: 'pool', cid: c.id });
+  }
+
+  function bindSlotClicks() {
+    document.querySelectorAll('.slot').forEach(el => {
+      el.onclick = () => {
+        if (!preCheckLocal()) return;
+        const s = state.steps[state.stepIdx];
+        if (!s || s.t !== 'snipe') return;
+        if (!el.id.startsWith(s.target)) return;
+        if (PROTECTED_SLOTS.has(el.id) || !el.classList.contains('filled')) return;
+        if (state.history.some(x => x.slotId === el.id && x.type === 'snipe')) return;
+        dispatch({ type: 'snipe', slotId: el.id });
+      };
+    });
+  }
+
+  function handleTimerClick() { if (isHost) dispatch({ type: 'timer' }); }
+  function handleUndoClick() { if (isHost) dispatch({ type: 'undo' }); }
+  function handleResetClick() {
+    if (isHost && confirm("確定清空畫面重新開始 BP 嗎？這不會中斷連線。")) dispatch({ type: 'soft-reset' });
+  }
+  function handleNameChange(team, name) {
+    if (isHost) dispatch({ type: 'name-change', team, name });
+  }
+
+  function updateTimerBtn() {
+    const btn = document.getElementById('btn-timer');
+    if (!btn) return;
+    const label = state.timerDuration ? `⏱️ ${state.timerDuration}秒` : '⏱️';
+    if (state.timerEnabled) { btn.textContent = `${label} (開)`; btn.classList.remove('off'); }
+    else { btn.textContent = `${label} (關)`; btn.classList.add('off'); }
+  }
+
+  // ====== 聊天 ======
+  function sendChatClick() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    if (isHost) {
+      executeChatMsg(myRole, myNickname, text);
+      broadcastChat(myRole, myNickname, text);
+    } else if (hostConn && hostConn.open) {
+      hostConn.send({ type: 'chat', roleName: myNickname, text });
+    }
+    input.value = '';
+  }
+  function handleChatEnter(e) { if (e.key === 'Enter') sendChatClick(); }
+
+  function broadcastChat(role, roleName, text) {
+    connections.forEach(x => { if (x.conn.open) x.conn.send({ type: 'chat', role, roleName, text }); });
+  }
+  function broadcastChatToOthers(except, role, roleName, text) {
+    connections.forEach(x => { if (x.conn !== except && x.conn.open) x.conn.send({ type: 'chat', role, roleName, text }); });
+  }
+  function pushSystemMsg(text) { executeChatMsg('system', '系統', text); }
+
+  // executeChatMsg：用 textContent 拼接，杜絕 XSS
+  function executeChatMsg(role, roleName, text) {
+    const container = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = `msg ${esc(role)}`;
+    const b = document.createElement('b');
+    b.textContent = `${roleName}:`;
+    div.appendChild(b);
+    div.appendChild(document.createTextNode(' ' + text));
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+
+    const panel = document.getElementById('chat-panel');
+    const toggle = document.getElementById('chat-toggle');
+    if (!panel.classList.contains('show')) toggle.classList.add('has-new');
+  }
+
+  function toggleChat() {
+    document.getElementById('chat-panel').classList.toggle('show');
+    document.getElementById('chat-toggle').classList.remove('has-new');
+  }
+
+  // 折疊 / 展開 進階賽制設定
+  function toggleFormat() {
+    document.getElementById('format-section').classList.toggle('collapsed');
+  }
+
+  // 返回登入大廳
+  function backToLobby() {
+    const connected = (peer && !peer.destroyed) || isHost || (hostConn && hostConn.open);
+    const msg = connected
+      ? "返回大廳將中斷目前的房間連線，確定要離開嗎？"
+      : "確定返回大廳嗎？";
+    if (!confirm(msg)) return;
+    // 關閉連線
+    try { if (hostConn) hostConn.close(); } catch (e) {}
+    try { connections.forEach(x => { try { x.conn.close(); } catch (e) {} }); } catch (e) {}
+    connections.length = 0;
+    try { if (peer && !peer.destroyed) peer.destroy(); } catch (e) {}
+    peer = null; hostConn = null; isHost = false;
+    // 重新顯示大廳並重置房號顯示
+    const disp = document.getElementById('room-code-display');
+    if (disp) { disp.style.display = 'none'; disp.textContent = ''; }
+    setConnBadge('', '');
+    document.getElementById('net-overlay').style.display = 'flex';
+  }
+
+  // ====== 戰報複製 ======
+  function copyResult() {
+    const getName = (slotId) => {
+      const h = state.history.find(x => x.slotId === slotId && x.type === 'pool');
+      if (!h) return '-';
+      let name = charById[h.cid] ? charById[h.cid].name : '-';
+      const sniped = state.history.some(x => x.slotId === slotId && x.type === 'snipe');
+      return sniped ? `~~${name}~~` : name;
+    };
+    const pickCount = state.steps.filter(s => s.team === 'blue' && s.t === 'pick').length;
+    let text = `【鳴潮 BP 戰報】\n🔵 ${state.blueName}\nBAN: ${getName('blue-ban-pre')}\nPICK: `;
+    const bluePicks = []; const redPicks = [];
+    for (let i = 1; i <= 7; i++) {
+      if (document.getElementById(`blue-pick-${i}`)?.style.display !== 'none') bluePicks.push(getName(`blue-pick-${i}`));
+      if (document.getElementById(`red-pick-${i}`)?.style.display !== 'none') redPicks.push(getName(`red-pick-${i}`));
+    }
+    text += bluePicks.join(', ');
+    text += `\n\n🔴 ${state.redName}\nBAN: ${getName('red-ban-pre')}\nPICK: ` + redPicks.join(', ');
+    navigator.clipboard.writeText(text)
+      .then(() => toast('戰報已複製到剪貼簿', 'ok'))
+      .catch(() => toast('複製失敗，請手動選取', 'warn'));
+  }
+
+  // ====== 英雄池渲染 ======
+  function renderPool() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    let shown = 0;
+
+    chars.forEach(c => {
+      if (filterType === '5star') { if (c.rarity !== 5) return; }
+      else if (filterType === '4star') { if (c.rarity !== 4) return; }
+      else if (filterType !== 'all' && c.el !== filterType) return;
+      if (q && !c.name.toLowerCase().includes(q) && !c.en.toLowerCase().includes(q)) return;
+      shown++;
+
+      const div = document.createElement('div');
+      let statusClass = '';
+      const usage = state.history.find(h => h.type === 'pool' && h.cid === c.id);
+      if (usage) {
+        const step = state.steps[usage.step];
+        if (step && step.t === 'ban') statusClass = 'used-ban disabled';
+        else if (step && step.team === 'blue') statusClass = 'used-blue disabled';
+        else if (step && step.team === 'red') statusClass = 'used-red disabled';
+      }
+      div.className = `card rarity-${c.rarity} ${statusClass}`;
+      div.onclick = () => onPoolClick(c);
+
+      // 3D 視差閃卡
+      div.addEventListener('mousemove', (e) => {
+        if (div.classList.contains('disabled')) return;
+        const rect = div.getBoundingClientRect();
+        const x = e.clientX - rect.left, y = e.clientY - rect.top;
+        const cx = rect.width / 2, cy = rect.height / 2;
+        div.style.transform = `perspective(800px) rotateX(${((y-cy)/cy)*-20}deg) rotateY(${((x-cx)/cx)*20}deg) scale3d(1.1,1.1,1.1)`;
+        div.style.setProperty('--gx', `${(x/rect.width)*100}%`);
+        div.style.setProperty('--gy', `${(y/rect.height)*100}%`);
+      });
+      div.addEventListener('mouseleave', () => {
+        if (div.classList.contains('disabled')) return;
+        div.style.transition = 'transform 0.4s cubic-bezier(0.25,1,0.5,1)';
+        div.style.transform = `perspective(800px) rotateX(0) rotateY(0) scale3d(1,1,1)`;
+        setTimeout(() => { div.style.transition = 'transform 0.1s ease, border-color 0.2s, box-shadow 0.2s'; }, 400);
+      });
+
+      const dot = document.createElement('div'); dot.className = `dot c-${c.el}`;
+      const img = document.createElement('img'); setImgWithFallback(img, c.imgList);
+      const nm = document.createElement('div'); nm.className = 'card-name'; nm.textContent = c.name;
+      div.append(dot, img, nm);
+      grid.appendChild(div);
+    });
+
+    if (shown === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'grid-empty';
+      empty.textContent = '查無符合的角色';
+      grid.appendChild(empty);
+    }
+  }
+
+  function filter(el, btn) {
+    document.querySelectorAll('.tag').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterType = el;
+    renderPool();
+  }
+
+  // ====== 啟動 ======
+  bindSlotClicks();
+  applyFormatToBoard();
+  render();
+  updateTimerBtn();
+</script>
+</body>
+</html>
+
+
