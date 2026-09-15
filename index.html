@@ -474,9 +474,40 @@
   .b-undo { background: #444; color: #eee; }
   .b-copy { background: linear-gradient(45deg, #2563eb, #3b82f6); color: #fff; }
   .b-red { background: linear-gradient(45deg, #dc2626, #ef4444); color: #fff; }
-  .b-chat { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; position: fixed; right: 16px; bottom: 14px; z-index: 200; }
+  .b-chat { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; position: relative; }
   .b-close-room { background: #3a2020; color: #ff9a9a; border: 1px solid rgba(239,68,68,0.5); position: fixed; left: 16px; bottom: 14px; z-index: 200; }
   .b-close-room:hover { background: #4a2525; }
+
+  /* 右下角固定容器：音量鈕 + 聊天室鈕並排，用 gap 自然分開，永不重疊 */
+  .br-dock { position: fixed; right: 16px; bottom: 14px; z-index: 200; display: flex; align-items: center; gap: 10px; }
+
+  /* 語音音量控制：收合時只是一顆圓鈕，點擊展開滑桿。由 br-dock 排在聊天室鈕左邊 */
+  .vol-control { position: relative; display: flex; align-items: center; height: 40px; }
+  .vol-btn { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-size: 18px; cursor: pointer; user-select: none; box-shadow: 0 3px 10px rgba(0,0,0,0.5); transition: transform 0.15s, filter 0.15s; border: 1px solid rgba(255,255,255,0.15); }
+  .vol-btn:hover { transform: scale(1.08); filter: brightness(1.12); }
+  .vol-btn:active { transform: scale(0.95); }
+  /* 展開的滑桿面板：絕對定位浮在圓鈕左側，不撐開容器、不推擠聊天室鈕 */
+  .vol-popover {
+    position: absolute; right: 48px; top: 50%; transform: translateY(-50%);
+    display: flex; align-items: center; gap: 10px;
+    padding: 0; overflow: hidden;
+    max-width: 0; opacity: 0; pointer-events: none;
+    background: rgba(15,15,20,0.94); border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+    transition: max-width 0.3s cubic-bezier(0.25,1,0.5,1), opacity 0.2s, padding 0.3s, border-color 0.3s;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .vol-control.open .vol-popover { max-width: 180px; opacity: 1; pointer-events: auto; padding: 6px 14px; border-color: rgba(255,255,255,0.12); }
+  .vol-pct { font-size: 12px; font-weight: 700; color: #ddd; width: 32px; text-align: right; }
+  .vol-slider { -webkit-appearance: none; appearance: none; width: 90px; height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--gold) 0%, var(--gold) 60%, #444 60%); outline: none; cursor: pointer; }
+  .vol-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px rgba(251,191,36,0.7); cursor: pointer; transition: transform 0.15s; }
+  .vol-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  .vol-slider::-moz-range-thumb { width: 15px; height: 15px; border: none; border-radius: 50%; background: #fff; box-shadow: 0 0 6px rgba(251,191,36,0.7); cursor: pointer; }
+  @media (max-width: 768px) {
+    .br-dock { right: 8px; bottom: 8px; gap: 8px; }
+    .vol-slider { width: 76px; }
+    .vol-control.open .vol-popover { max-width: 160px; }
+  }
   .b-chat.has-new::after { content: ''; position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; background: var(--red); border-radius: 50%; border: 2px solid #14141c; animation: bounce-dot 1s infinite; }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; filter: none; }
 
@@ -537,15 +568,13 @@
     .net-split { flex-direction: column; }
     .grid { grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); }
     .footer { flex-wrap: wrap; gap: 8px; padding: 8px; }
-    .b-chat, .b-close-room { padding: 8px 14px; font-size: 12px; bottom: 8px; }
-    .b-chat { right: 8px; }
-    .b-close-room { left: 8px; }
+    .b-chat, .b-close-room { padding: 8px 14px; font-size: 12px; }
+    .b-close-room { left: 8px; bottom: 8px; }
     .title { font-size: 18px; letter-spacing: 2px; }
   }
 </style>
 </head>
 <body>
-
   <div class="conn-badge" id="conn-badge"></div>
   <div class="toast-wrap" id="toast-wrap"></div>
 
@@ -647,7 +676,7 @@
                 <select id="cfg-timer">
                   <option value="30">30 秒</option>
                   <option value="60" selected>60 秒</option>
-                  <option value="120">120 秒</option>
+                  <option value="80">80 秒</option>
                   <option value="0">關閉計時</option>
                 </select>
               </div>
@@ -747,10 +776,24 @@
     <button class="btn b-timer" id="btn-timer" onclick="handleTimerClick()" style="display:none;">⏱️ 30秒 (開)</button>
     <button class="btn b-undo" id="btn-undo" onclick="handleUndoClick()" disabled style="display:none;">上一步</button>
     <button class="btn b-copy" onclick="copyResult()">複製戰報</button>
-    <button class="btn b-chat" id="btn-chat" onclick="toggleChat()">💬 聊天室</button>
     <button class="btn b-red" id="btn-reset" onclick="handleResetClick()" style="display:none;">重置</button>
     <button class="btn b-close-room" id="btn-close-room" onclick="handleCloseRoom()" style="display:none;">關閉房間</button>
   </div>
+
+  <!-- 右下角固定容器：音量鈕 + 聊天室鈕，用 flex 排列，永不重疊 -->
+  <div class="br-dock">
+    <!-- 語音音量：icon 按鈕，點擊展開滑桿 -->
+    <div class="vol-control" id="vol-control" title="語音音量">
+      <div class="vol-popover" id="vol-popover">
+        <input type="range" id="vol-slider" class="vol-slider" min="0" max="100" value="60"
+               oninput="onVolumeSlider(this.value)">
+        <span class="vol-pct" id="vol-pct">60%</span>
+      </div>
+      <div class="vol-btn" id="vol-btn" onclick="toggleVolPanel()">🔊</div>
+    </div>
+    <button class="btn b-chat" id="btn-chat" onclick="toggleChat()">💬 聊天室</button>
+  </div>
+
   <div class="chat-panel" id="chat-panel">
     <div class="chat-header"><span>賽事聊天室</span><span class="chat-close" onclick="toggleChat()">✖</span></div>
     <div class="chat-messages" id="chat-messages"><div class="msg system">歡迎來到鳴潮 BP 系統！<br>這裡可以隨時討論戰況。</div></div>
@@ -823,13 +866,11 @@
     { id: 'xuanling', name: '玄翎', en: 'Xuanling', el: 'Havoc', rarity: 5 }
   ];
 
-  // 三路徑自動對應邏輯 (頭像、立繪、語音)
-  // 每項提供多種副檔名候選，載入失敗會自動往下試（見 tryNextSrc / playVoice）
   const chars = baseChars.map(c => {
     const file = c.fileName || c.name;
     return {
       ...c,
-      rarity: c.rarity || 5,   // 未標註者預設五星
+      rarity: c.rarity || 5,
       img: `./avatar/${file}.webp`,
       imgList: [`./avatar/${file}.webp`, `./avatar/${file}.png`, `./avatar/${file}.jpg`, `./avatar/${file}.jpeg`],
       portrait: `./portrait/${file}.webp`,
@@ -839,24 +880,17 @@
     };
   });
 
-  // 自訂置頂順序（這幾個排在最前面），其餘維持名單原順序
   const PINNED_ORDER = ['jingran', 'qingxiao', 'suisui', 'xuanling', 'losera', 'rebecca', 'lucy', 'danya', 'feixue', 'sigrlinn'];
   chars.sort((a, b) => {
     const pa = PINNED_ORDER.indexOf(a.id);
     const pb = PINNED_ORDER.indexOf(b.id);
-    // 兩者皆在置頂清單：照清單順序
     if (pa !== -1 && pb !== -1) return pa - pb;
-    // 只有一個在置頂清單：置頂者優先
     if (pa !== -1) return -1;
     if (pb !== -1) return 1;
-    // 都不在置頂清單：五星靠前、四星靠後（同星級維持原順序）
     return b.rarity - a.rarity;
   });
   const charById = Object.fromEntries(chars.map(c => [c.id, c]));
 
-  // ====== 賽制定義（可由裁判選擇）======
-  // 每個 step：t=ban|pick|snipe, team=blue|red, id=對應格子（pick/ban）, target=被破壞隊（snipe）
-  // prot: 該 pick 格是否受保護（破壞階段不可選）
   function buildSteps(format) {
     const base = [
       { t: 'ban', team: 'blue', id: 'blue-ban-pre' }, { t: 'ban', team: 'red', id: 'red-ban-pre' },
@@ -885,38 +919,34 @@
     return base.concat(snipe);
   }
 
-  // 受保護的 pick 格（第 3 picks）。可依賽制調整，這裡沿用原規則。
   const PROTECTED_SLOTS = new Set(['blue-pick-3', 'red-pick-3']);
 
-  // ====== 集中式狀態 ======
   const state = {
     format: 'standard',
     steps: buildSteps('standard'),
     stepIdx: 0,
-    history: [],            // [{ type:'pool'|'snipe', step, cid?, slotId }]
-    used: new Set(),        // 已使用角色 id（ban+pick）
+    history: [],
+    used: new Set(),
     blueName: 'BLUE TEAM',
     redName: 'RED TEAM',
-    timerDuration: 60,      // 0 = 關閉
+    timerDuration: 60,
     timerEnabled: true,
-    timeoutMode: 'pause',   // pause | random | skip
-    turnStartAt: 0,         // host 廣播的本回合開始時間戳（毫秒）
+    timeoutMode: 'pause',
+    turnStartAt: 0,
   };
 
   let filterType = 'all';
 
-  // ====== 身分與連線 ======
-  let myRole = 'blue';        // referee | blue | red | viewer（viewer 僅在同隊已有人時自動降級）
+  let myRole = 'blue';
   let myNickname = '路人';
 
-  // 身分按鈕選擇
   function selectRole(btn) {
     document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('my-role').value = btn.dataset.role;
   }
   let peer = null, isHost = false, hostConn = null;
-  const connections = [];     // host 端：每項 { conn, role, nickname }
+  const connections = [];
 
   function getRoleDisplayName(role) {
     if (role === 'referee') return "⚖️ 裁判";
@@ -925,14 +955,12 @@
     return "👀 觀眾";
   }
 
-  // ====== 安全工具：HTML escape，防止聊天室/隊名 XSS ======
   function esc(str) {
     return String(str ?? '').replace(/[&<>"']/g, ch => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[ch]));
   }
 
-  // ====== Toast（取代 alert）======
   function toast(msg, kind) {
     const wrap = document.getElementById('toast-wrap');
     const el = document.createElement('div');
@@ -948,7 +976,14 @@
     b.className = 'conn-badge ' + (cls || '');
   }
 
-  // ====== 音效快取 + 預載 ======
+  // ====== 語音音量（純本地個人設定，不同步給其他玩家）======
+  // 0 ~ 1；預設 0.6。若瀏覽器有記住上次設定則沿用。
+  let voiceVolume = 0.6;
+  try {
+    const saved = localStorage.getItem('bp_voice_volume');
+    if (saved !== null) voiceVolume = Math.min(1, Math.max(0, parseFloat(saved)));
+  } catch (e) {}
+
   const audioCache = {};
   function getAudio(src) {
     if (!audioCache[src]) {
@@ -956,10 +991,11 @@
       a.preload = 'auto';
       audioCache[src] = a;
     }
-    return audioCache[src];
+    const a = audioCache[src];
+    a.volume = voiceVolume;   // 每次取用都套用當前音量
+    return a;
   }
 
-  // 語音不重疊 + 多格式自動嘗試：播新的前先停掉正在播的那個
   let currentVoice = null;
   function playVoice(srcOrList) {
     if (!srcOrList) return;
@@ -973,14 +1009,58 @@
       const a = getAudio(src);
       currentVoice = a;
       a.currentTime = 0;
-      // 若這個檔載入失敗，換下一個候選格式
+      a.volume = voiceVolume;
       a.onerror = () => { if (list.length) tryNext(); };
       a.play().catch(() => { if (list.length) tryNext(); });
     };
     tryNext();
   }
 
-  // Ban 音效：Web Audio 合成低沉震撼的「封禁重擊」聲，不需音檔
+  // 調整音量：更新狀態、套用到正在播與已快取的音檔、記憶到 localStorage、更新 UI
+  function setVoiceVolume(v) {
+    voiceVolume = Math.min(1, Math.max(0, v));
+    if (currentVoice) { try { currentVoice.volume = voiceVolume; } catch (e) {} }
+    Object.values(audioCache).forEach(a => { try { a.volume = voiceVolume; } catch (e) {} });
+    try { localStorage.setItem('bp_voice_volume', String(voiceVolume)); } catch (e) {}
+    updateVolumeUI();
+  }
+
+  function onVolumeSlider(val) {
+    setVoiceVolume(parseInt(val, 10) / 100);
+  }
+
+  // 展開 / 收合音量面板
+  function toggleVolPanel() {
+    const ctrl = document.getElementById('vol-control');
+    if (ctrl) ctrl.classList.toggle('open');
+  }
+
+  // 點面板以外的地方 → 自動收合
+  document.addEventListener('click', (e) => {
+    const ctrl = document.getElementById('vol-control');
+    if (ctrl && ctrl.classList.contains('open') && !ctrl.contains(e.target)) {
+      ctrl.classList.remove('open');
+    }
+  });
+
+  function updateVolumeUI() {
+    const slider = document.getElementById('vol-slider');
+    const btn = document.getElementById('vol-btn');
+    const pctLabel = document.getElementById('vol-pct');
+    const pct = Math.round(voiceVolume * 100);
+    if (slider) {
+      if (String(slider.value) !== String(pct)) slider.value = pct;
+      // 填充漸層跟著音量：金色到 pct%，之後轉灰
+      slider.style.background = `linear-gradient(90deg, var(--gold) 0%, var(--gold) ${pct}%, #444 ${pct}%)`;
+    }
+    if (pctLabel) pctLabel.textContent = pct + '%';
+    if (btn) {
+      if (voiceVolume === 0) btn.textContent = '🔇';
+      else if (voiceVolume < 0.5) btn.textContent = '🔈';
+      else btn.textContent = '🔊';
+    }
+  }
+
   let _actx = null;
   function playBanSound() {
     try {
@@ -988,8 +1068,6 @@
       const ctx = _actx;
       if (ctx.state === 'suspended') ctx.resume();
       const now = ctx.currentTime;
-
-      // 主低頻爆震（深沉下墜）
       const sub = ctx.createOscillator();
       const subG = ctx.createGain();
       sub.type = 'sine';
@@ -1000,8 +1078,6 @@
       subG.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
       sub.connect(subG).connect(ctx.destination);
       sub.start(now); sub.stop(now + 1.0);
-
-      // 中頻粗糙質感（增加「震撼」的厚度）
       const body = ctx.createOscillator();
       const bodyG = ctx.createGain();
       body.type = 'sawtooth';
@@ -1015,8 +1091,6 @@
       bodyLP.frequency.setValueAtTime(400, now);
       body.connect(bodyLP).connect(bodyG).connect(ctx.destination);
       body.start(now); body.stop(now + 0.7);
-
-      // 爆破雜訊（撞擊瞬間的衝擊感）
       const noiseLen = Math.floor(ctx.sampleRate * 0.25);
       const noiseBuf = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
       const nd = noiseBuf.getChannelData(0);
@@ -1034,7 +1108,6 @@
     } catch (e) {}
   }
 
-  // 屬性圖標：若載入失敗，依序嘗試其他副檔名與大小寫，全部失敗才放棄
   function elIconFallback(img) {
     const el = img.dataset.el;
     const tries = img._elTries || (img._elTries = [
@@ -1048,7 +1121,6 @@
     if (tries.length) {
       img.src = tries.shift();
     } else {
-      // 全部找不到：改用文字後備，避免破圖
       img.onerror = null;
       img.style.display = 'none';
       const parent = img.parentElement;
@@ -1062,7 +1134,6 @@
     }
   }
 
-  // 角色圖（頭像/立繪）：依候選清單自動嘗試多種副檔名，全失敗才標記破圖
   function setImgWithFallback(img, list) {
     const tries = (list || []).slice();
     img.onerror = () => {
@@ -1094,8 +1165,6 @@
     document.getElementById('name-red').readOnly = !host;
   }
 
-  // ====== 連線：建立房間（裁判 / 房主）======
-  // 暱稱必填校驗：空則提示並高亮，回傳 null
   function requireNickname() {
     const el = document.getElementById('my-nickname');
     const name = el.value.trim();
@@ -1115,7 +1184,6 @@
     myNickname = inputName;
     myRole = 'referee';
 
-    // 讀取賽制設定
     state.format = document.getElementById('cfg-format').value;
     state.steps = buildSteps(state.format);
     const td = parseInt(document.getElementById('cfg-timer').value, 10);
@@ -1137,44 +1205,37 @@
       document.getElementById('status').textContent = `房主控制中 | 房間代碼: ${id.replace('BP','')}`;
       pushSystemMsg(`${myNickname}（${getRoleDisplayName(myRole)}）建立了房間`);
       applyFormatToBoard();
+      beginTurnTimer();
       render();
     });
 
     peer.on('error', (err) => { toast('連線錯誤：' + (err.type || ''), 'warn'); });
 
     peer.on('connection', (conn) => {
-      conn.on('open', () => {
-        // 等待對方送來 hello 取得身分，再正式記錄
-      });
+      conn.on('open', () => {});
       conn.on('data', (data) => onHostReceive(conn, data));
       conn.on('close', () => onGuestLeave(conn));
     });
   }
 
-  // host 收到 guest 封包：先做權威驗證再執行/廣播
   function onHostReceive(conn, data) {
     if (data.type === 'hello') {
       let role = data.role;
-      // 同隊只允許一名選手。若該隊已有人：
-      //  - 若是同暱稱視為「斷線重連」，接回原位、放行
-      //  - 否則拒絕加入，請對方改選另一隊
       if (role === 'blue' || role === 'red') {
         const occupied = connections.find(x => x.role === role);
         if (occupied) {
           if (occupied.nickname === data.nickname) {
-            // 視為重連：移除舊的殘留連線，讓新連線接手
             try { if (occupied.conn && occupied.conn.open) occupied.conn.close(); } catch (e) {}
             const oi = connections.findIndex(x => x.conn === occupied.conn);
             if (oi >= 0) connections.splice(oi, 1);
           } else {
             const teamName = role === 'blue' ? '藍隊' : '紅隊';
             conn.send({ type: 'join-rejected', reason: `${teamName}已有選手，請返回大廳選擇另一隊。` });
-            return; // 不加入 connections
+            return;
           }
         }
       }
       connections.push({ conn, role, nickname: data.nickname });
-      // 回送目前完整狀態
       conn.send(buildSyncPayload());
       pushSystemMsg(`${data.nickname}（${getRoleDisplayName(role)}）進入了房間`);
       broadcastChatToOthers(conn, 'system', '系統', `${data.nickname}（${getRoleDisplayName(role)}）進入了房間`);
@@ -1185,23 +1246,20 @@
     const senderRole = entry ? entry.role : 'viewer';
 
     if (data.type === 'chat') {
-      // 聊天：以伺服器記錄的身分為準，忽略 guest 自報
       executeChatMsg(senderRole, data.roleName, data.text);
       broadcastChatToOthers(conn, senderRole, data.roleName, data.text);
       return;
     }
 
-    // 操作類：referee 專屬動作
     if (['undo', 'timer', 'soft-reset', 'name-change'].includes(data.type)) {
-      if (senderRole !== 'referee') { return; } // 非裁判無權，靜默丟棄
+      if (senderRole !== 'referee') { return; }
       applyAuthoritativeAction(data);
       return;
     }
 
-    // pool / snipe：必須輪到該隊
     if (data.type === 'pool' || data.type === 'snipe') {
-      if (!roleCanActNow(senderRole)) return;          // 不是你的回合
-      if (!validateAction(data)) return;               // 內容合法性
+      if (!roleCanActNow(senderRole)) return;
+      if (!validateAction(data)) return;
       applyAuthoritativeAction(data);
       return;
     }
@@ -1217,16 +1275,17 @@
     }
   }
 
-  // host：執行權威動作並廣播權威狀態（不信任 guest 的本地預演）
   function applyAuthoritativeAction(data) {
+    const prevStep = state.stepIdx;
     applyActionToState(data);
+    // 只有「真正推進到新一步」時才重置本回合計時起點，
+    // 聊天 / 改名 / 開關計時等不推進步驟的動作不會重置倒數。
+    if (state.stepIdx !== prevStep) beginTurnTimer();
     render();
-    // 廣播完整權威狀態，確保所有端一致（避免競態 / 不同步）
     const payload = buildSyncPayload();
     connections.forEach(x => { if (x.conn.open) x.conn.send(payload); });
   }
 
-  // 校驗 action 內容是否合法（防偽造封包）
   function validateAction(data) {
     const s = state.steps[state.stepIdx];
     if (data.type === 'pool') {
@@ -1246,7 +1305,6 @@
     return true;
   }
 
-  // ====== 連線：加入房間（選手 / 觀眾）======
   function joinRoom() {
     const inputName = requireNickname();
     if (!inputName) return;
@@ -1265,12 +1323,10 @@
         isHost = false; applyHostUI(false);
         setConnBadge('已連線 · ' + getRoleDisplayName(myRole), 'online');
         document.getElementById('status').textContent = `已連線 | 身分: ${getRoleDisplayName(myRole)}`;
-        // 送 hello 告知身分與暱稱
         hostConn.send({ type: 'hello', role: myRole, nickname: myNickname });
       });
       hostConn.on('data', (data) => onGuestReceive(data));
       hostConn.on('close', () => {
-        // 房主斷線（可能是關閉分頁、斷網或主動關閉房間）→ 自動回大廳
         forceReturnToLobby('房主已離開，房間已關閉');
       });
       hostConn.on('error', () => { toast('找不到該房間，請確認代碼', 'warn'); });
@@ -1278,7 +1334,6 @@
     peer.on('error', () => { toast('連線失敗，請確認代碼或網路', 'warn'); });
   }
 
-  // guest 收到 host 封包
   function onGuestReceive(data) {
     if (data.type === 'sync') { applySync(data); return; }
     if (data.type === 'chat') { executeChatMsg(data.role, data.roleName, data.text); return; }
@@ -1286,7 +1341,6 @@
     if (data.type === 'room-closed') { forceReturnToLobby(data.reason || '房主已關閉房間'); return; }
   }
 
-  // ====== 單機測試 ======
   function startOffline() {
     const inputName = document.getElementById('my-nickname').value.trim();
     myNickname = inputName || "單機測試"; myRole = 'referee';
@@ -1298,19 +1352,16 @@
     timeLeft = state.timerDuration;
     document.getElementById('net-overlay').style.display = 'none';
     isHost = true; applyHostUI(true);
-    // 單機測試沒有房間可關，隱藏關閉房間鈕
     document.getElementById('btn-close-room').style.display = 'none';
     setConnBadge('單機測試', 'online');
     document.getElementById('status').textContent = `單機測試模式`;
     applyFormatToBoard();
+    beginTurnTimer();
     render();
   }
 
-  // ====== 動作分派 ======
-  // 本機操作的統一入口：host 直接執行並廣播；guest 只送給 host（不本地預演，避免競態）
   function dispatch(action) {
     if (isHost) {
-      // host 即裁判：本機操作直接走權威路徑（但仍做基本驗證）
       if (action.type === 'pool' || action.type === 'snipe') {
         if (!roleCanActNow('referee') && !roleCanActNow(myRole)) return;
         if (!validateAction(action)) return;
@@ -1322,7 +1373,6 @@
     }
   }
 
-  // 將 action 應用到 state（純狀態變更，不碰 DOM）
   function applyActionToState(action) {
     const s = state.steps[state.stepIdx];
     switch (action.type) {
@@ -1349,6 +1399,8 @@
       }
       case 'timer': {
         state.timerEnabled = !state.timerEnabled;
+        // 重新開啟計時：本回合重新給滿秒，避免沿用舊的時間戳導致直接歸零。
+        if (state.timerEnabled && isHost) beginTurnTimer();
         break;
       }
       case 'name-change': {
@@ -1359,7 +1411,7 @@
       case 'soft-reset': {
         state.stepIdx = 0; state.history = []; state.used.clear();
         state.timerEnabled = state.timerDuration > 0;
-        timeLeft = state.timerDuration;
+        if (isHost) beginTurnTimer();
         executeChatMsg('system', '系統', '裁判已重置 BP 畫面，進入下一局！');
         break;
       }
@@ -1372,7 +1424,6 @@
     }
   }
 
-  // ====== 同步封包 ======
   function buildSyncPayload() {
     return {
       type: 'sync',
@@ -1384,7 +1435,6 @@
       timerDuration: state.timerDuration,
       timerEnabled: state.timerEnabled,
       timeoutMode: state.timeoutMode,
-      timeLeft: timeLeft,
       turnStartAt: state.turnStartAt,
     };
   }
@@ -1401,18 +1451,12 @@
     state.timeoutMode = data.timeoutMode;
     state.turnStartAt = data.turnStartAt;
     state.used = new Set(state.history.filter(h => h.type === 'pool').map(h => h.cid));
-    // guest 端計時：以 host 廣播的開始時間戳推算，確保同步
-    if (state.timerEnabled && state.turnStartAt) {
-      const elapsed = Math.floor((Date.now() - state.turnStartAt) / 1000);
-      timeLeft = Math.max(0, state.timerDuration - elapsed);
-    } else {
-      timeLeft = data.timeLeft;
-    }
+    // guest 端不自行推算，一律交給 startTimer() 依 turnStartAt 計算，
+    // 確保 host / guest 用同一個時間基準，避免漂移。
     applyFormatToBoard();
     render();
   }
 
-  // ====== 根據賽制顯示 / 隱藏多餘格子與保護盾 ======
   function applyFormatToBoard() {
     const usedSlotIds = new Set(state.steps.filter(s => s.id).map(s => s.id));
     ['blue', 'red'].forEach(team => {
@@ -1420,14 +1464,12 @@
         const el = document.getElementById(`${team}-pick-${i}`);
         if (!el) continue;
         el.style.display = usedSlotIds.has(`${team}-pick-${i}`) ? '' : 'none';
-        // 保護位樣式（金邊由 .prot 類別驅動）
         const isProt = PROTECTED_SLOTS.has(`${team}-pick-${i}`);
         el.classList.toggle('prot', isProt);
       }
     });
   }
 
-  // ====== 集中渲染：所有狀態變更後只走這一條路徑 ======
   function render() {
     renderBoard();
     renderPool();
@@ -1440,7 +1482,6 @@
     startTimer();
   }
 
-  // 依 history 重畫整個棋盤（冪等，sync/undo/reset 共用）
   function renderBoard() {
     document.querySelectorAll('.slot, .ban-box').forEach(el => {
       el.classList.remove('filled', 'sniped', 'active', 'valid-target');
@@ -1471,7 +1512,6 @@
           const tag = el.querySelector('.name-tag');
           if (tag) {
             tag.textContent = c.name;
-            // 依字數自動縮字：越長越小，保證完整顯示不被裁掉
             const len = c.name.length;
             let scale = '';
             if (len >= 7) scale = 'clamp(7px, 1.3vw, 10px)';
@@ -1520,36 +1560,45 @@
     }
   }
 
-  // ====== 計時器（host 主控，廣播時間戳供 guest 同步）======
+  // ====== 計時器（統一以時間戳推算，host / guest 邏輯一致）======
   let timerInterval = null;
   let timeLeft = 30;
 
+  // 只在「真正進入新一步」時呼叫（見 applyAuthoritativeAction）。
+  // 負責記錄本回合的開始時間戳，並重設 timeLeft 為滿秒。
+  function beginTurnTimer() {
+    state.turnStartAt = Date.now();
+    timeLeft = state.timerDuration;
+  }
+
+  // startTimer 只負責「畫」計時器，不再自行重設 turnStartAt，
+  // 因此 render() 被聊天 / 改名等動作重複呼叫時，倒數不會被錯誤重置。
   function startTimer() {
     clearInterval(timerInterval);
     const timerEl = document.getElementById('timer');
     if (state.stepIdx >= state.steps.length) { timerEl.textContent = "--"; timerEl.classList.remove('warning'); return; }
     if (!state.timerEnabled) { timerEl.textContent = "∞"; timerEl.classList.remove('warning'); return; }
 
-    // host 在每次進入新回合時設定 turnStartAt 並廣播
-    if (isHost) {
-      state.turnStartAt = Date.now();
-      timeLeft = state.timerDuration;
-    }
-    timerEl.textContent = timeLeft;
-    timerEl.classList.toggle('warning', timeLeft <= 5);
-
-    timerInterval = setInterval(() => {
-      timeLeft--;
+    const tick = () => {
+      // host 與 guest 都用 turnStartAt 推算剩餘秒數，
+      // 只要 turnStartAt 一致（sync 已同步），兩端顯示就一致，
+      // 也不會受背景分頁 setInterval 被降頻影響（每次都重新計算）。
+      if (state.turnStartAt) {
+        const elapsed = Math.floor((Date.now() - state.turnStartAt) / 1000);
+        timeLeft = Math.max(0, state.timerDuration - elapsed);
+      }
       timerEl.textContent = timeLeft;
       timerEl.classList.toggle('warning', timeLeft <= 5);
       if (timeLeft <= 0) {
         clearInterval(timerInterval);
         if (isHost) handleTimeout();
       }
-    }, 1000);
+    };
+    tick();
+    // 250ms 更新一次：顯示更即時，且從背景切回前景時能快速校正。
+    timerInterval = setInterval(tick, 250);
   }
 
-  // 超時行為：依裁判設定
   function handleTimeout() {
     if (state.stepIdx >= state.steps.length) return;
     const mode = state.timeoutMode;
@@ -1560,11 +1609,9 @@
     }
     if (mode === 'skip') {
       const s = state.steps[state.stepIdx];
-      // 跳過：snipe 直接過；pick/ban 也視為放棄該步
       applyAuthoritativeAction({ type: s.t === 'snipe' ? 'snipe-skip' : 'skip' });
       return;
     }
-    // random
     const s = state.steps[state.stepIdx];
     if (s.t === 'snipe') {
       const targets = [...document.querySelectorAll('.valid-target')];
@@ -1576,8 +1623,6 @@
     }
   }
 
-  // ====== 使用者互動入口 ======
-  // 觀眾 / 非當前回合：以 toast 提示，不再用 alert
   function preCheckLocal() {
     if (state.stepIdx >= state.steps.length) return false;
     if (isHost || myRole === 'referee') return true;
@@ -1626,12 +1671,10 @@
     else { btn.textContent = `${label} (關)`; btn.classList.add('off'); }
   }
 
-  // ====== 規則說明彈窗 ======
   function openRules() { document.getElementById('rules-modal').classList.add('show'); }
   function closeRules() { document.getElementById('rules-modal').classList.remove('show'); }
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeRules(); });
 
-  // ====== 聊天 ======
   function sendChatClick() {
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
@@ -1640,7 +1683,6 @@
       executeChatMsg(myRole, myNickname, text);
       broadcastChat(myRole, myNickname, text);
     } else if (hostConn && hostConn.open) {
-      // 選手：先在自己畫面顯示一次（host 轉發時會跳過自己，故本機需自行顯示）
       executeChatMsg(myRole, myNickname, text);
       hostConn.send({ type: 'chat', roleName: myNickname, text });
     }
@@ -1656,7 +1698,6 @@
   }
   function pushSystemMsg(text) { executeChatMsg('system', '系統', text); }
 
-  // executeChatMsg：用 textContent 拼接，杜絕 XSS
   function executeChatMsg(role, roleName, text) {
     const container = document.getElementById('chat-messages');
     const div = document.createElement('div');
@@ -1679,47 +1720,38 @@
     if (toggle) toggle.classList.remove('has-new');
   }
 
-  // 折疊 / 展開 進階賽制設定
   function toggleFormat() {
     document.getElementById('format-section').classList.toggle('collapsed');
   }
 
-  // 返回登入大廳
   function backToLobby() {
     const connected = (peer && !peer.destroyed) || isHost || (hostConn && hostConn.open);
     const msg = connected
       ? "返回大廳將中斷目前的房間連線，確定要離開嗎？"
       : "確定返回大廳嗎？";
     if (!confirm(msg)) return;
-    // 關閉連線
     try { if (hostConn) hostConn.close(); } catch (e) {}
     try { connections.forEach(x => { try { x.conn.close(); } catch (e) {} }); } catch (e) {}
     connections.length = 0;
     try { if (peer && !peer.destroyed) peer.destroy(); } catch (e) {}
     peer = null; hostConn = null; isHost = false;
-    // 重新顯示大廳並重置房號顯示
     const disp = document.getElementById('room-code-display');
     if (disp) { disp.style.display = 'none'; disp.textContent = ''; }
     setConnBadge('', '');
     document.getElementById('net-overlay').style.display = 'flex';
   }
 
-  // 裁判：關閉房間，通知所有人並解散
   function handleCloseRoom() {
     if (!isHost) return;
-    // 單機測試沒有其他人，直接回大廳即可
     const hasGuests = connections.length > 0;
     const msg = hasGuests
       ? '關閉房間會將所有成員一起退出，確定嗎？'
       : '確定關閉房間並返回大廳嗎？';
     if (!confirm(msg)) return;
-    // 廣播房間關閉給所有 guest
     connections.forEach(x => { try { if (x.conn.open) x.conn.send({ type: 'room-closed', reason: '房主已關閉房間' }); } catch (e) {} });
-    // 稍候片刻確保訊息送達，再自行解散
     setTimeout(() => forceReturnToLobby('已關閉房間'), 200);
   }
 
-  // 強制返回大廳（不詢問確認），用於被拒絕加入、房主關閉房間等情境
   function forceReturnToLobby(msg) {
     try { if (hostConn) hostConn.close(); } catch (e) {}
     try { connections.forEach(x => { try { x.conn.close(); } catch (e) {} }); } catch (e) {}
@@ -1733,7 +1765,6 @@
     if (msg) setTimeout(() => toast(msg, 'warn'), 100);
   }
 
-  // ====== 戰報複製 ======
   function copyResult() {
     const getName = (slotId) => {
       const h = state.history.find(x => x.slotId === slotId && x.type === 'pool');
@@ -1756,7 +1787,6 @@
       .catch(() => toast('複製失敗，請手動選取', 'warn'));
   }
 
-  // ====== 英雄池渲染 ======
   function renderPool() {
     const grid = document.getElementById('grid');
     grid.innerHTML = '';
@@ -1782,7 +1812,6 @@
       div.className = `card rarity-${c.rarity} ${statusClass}`;
       div.onclick = () => onPoolClick(c);
 
-      // 3D 視差閃卡
       div.addEventListener('mousemove', (e) => {
         if (div.classList.contains('disabled')) return;
         const rect = div.getBoundingClientRect();
@@ -1821,13 +1850,12 @@
     renderPool();
   }
 
-  // ====== 啟動 ======
   bindSlotClicks();
   applyFormatToBoard();
   render();
   updateTimerBtn();
+  updateVolumeUI();
 </script>
+
 </body>
 </html>
-
-
