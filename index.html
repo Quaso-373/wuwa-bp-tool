@@ -95,6 +95,19 @@
   .net-box select option { background: #16161e; color: #fff; }
   .offline-link { display: block; margin: 18px auto 4px; background: none; border: none; color: #777; font-size: 13px; cursor: pointer; letter-spacing: 1px; padding: 6px; }
   .offline-link:hover { color: var(--gold); }
+  /* 進房讀取畫面 */
+  .loader { position: fixed; inset: 0; z-index: 10002; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 22px; background: radial-gradient(ellipse at center, #15151f 0%, #050508 70%); transition: opacity 0.4s; }
+  .loader.show { display: flex; }
+  .loader.out { opacity: 0; pointer-events: none; }
+  .loader .ld-title { font-size: 15px; font-weight: 700; letter-spacing: 4px; color: var(--sub); }
+  .loader .ld-track { position: relative; width: min(560px, 80vw); height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); }
+  .loader .ld-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: linear-gradient(90deg, #8a6508, var(--gold)); box-shadow: 0 0 12px rgba(251,191,36,0.6); transition: width 0.25s ease-out; }
+  .loader .ld-icon { position: absolute; top: 50%; left: 0; width: 46px; height: 46px; object-fit: contain; transform: translate(-50%, -62%); transition: left 0.25s ease-out; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6)); animation: ld-bob 0.6s ease-in-out infinite alternate; }
+  @keyframes ld-bob { from { margin-top: 0; } to { margin-top: -6px; } }
+  .loader .ld-row { width: min(560px, 80vw); display: flex; justify-content: space-between; font-size: 12px; color: #888; letter-spacing: 1px; }
+  .loader .ld-pct { font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; color: var(--gold); }
+  .loader .ld-skip { background: none; border: none; color: #666; font-size: 12px; cursor: pointer; letter-spacing: 1px; visibility: hidden; }
+  .loader .ld-skip.show { visibility: visible; } .loader .ld-skip:hover { color: var(--gold); }
   /* 素材預載進度 */
   .preload { position: fixed; left: 16px; bottom: 16px; z-index: 10001; width: 260px; padding: 10px 14px 12px; border-radius: 10px; background: rgba(12,12,18,0.92); border: 1px solid rgba(251,191,36,0.35); box-shadow: 0 8px 24px rgba(0,0,0,0.5); font-size: 12px; color: #ddd; letter-spacing: 0.5px; transition: opacity 0.6s, transform 0.6s; display: none; }
   .preload.show { display: block; }
@@ -197,18 +210,10 @@
   .chat-input-area button { height: 34px; padding: 0 16px; border: none; border-radius: 17px; background: #333; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
   .chat-input-area button:hover { background: #555; }
 
-  /* 進度條 */
-  .progress { height: 3.2vh; min-height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 4px; background: #0a0a0f; border-bottom: 1px solid #222; position: relative; }
-  .pg { width: 30px; height: 20px; display: flex; align-items: center; justify-content: center; font-family: 'Noto Sans TC', sans-serif; font-size: 11px; font-weight: 700; border-radius: 3px; color: #6b6b76; transition: 0.25s; }
-  .pg.b { border: 1px solid rgba(59,130,246,0.45); } .pg.r { border: 1px solid rgba(239,68,68,0.45); }
-  .pg.done.b { background: rgba(59,130,246,0.28); color: var(--sub); border-color: transparent; }
-  .pg.done.r { background: rgba(239,68,68,0.28); color: var(--sub); border-color: transparent; }
-  .pg.cur { color: #fff; transform: scale(1.15); border-color: transparent; }
-  .pg.cur.b { background: var(--blue); box-shadow: 0 0 10px var(--blue); } .pg.cur.r { background: var(--red); box-shadow: 0 0 10px var(--red); }
-  .pg.gap { margin-left: 10px; }
-  .pg-info { position: absolute; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--muted); }
-  .pg-info.l { left: 16px; } .pg-info.r { right: 16px; }
-  .pg-info .on { color: #6ee7b7; } .pg-info .off { color: #fca5a5; }
+  /* 房號與連線狀態（頂欄右側） */
+  .tb-info { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+  .tb-info:empty { display: none; }
+  .tb-info .on { color: #6ee7b7; } .tb-info .off { color: #fca5a5; }
 
   /* 大立繪區 */
   .stage { flex: 1; min-height: 0; position: relative; display: flex; overflow: hidden;
@@ -477,10 +482,17 @@
 </div>
 
 <!-- ======================= 網路大廳 ======================= -->
+<div id="loader" class="loader zh" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+  <div class="ld-title">載入素材中</div>
+  <div class="ld-pct" id="ld-pct">0%</div>
+  <div class="ld-track"><div class="ld-fill" id="ld-fill"></div><img class="ld-icon" id="ld-icon" src="favicon.png" alt=""></div>
+  <div class="ld-row"><span id="ld-sub">準備中…</span><span>動態立繪會在背景繼續下載</span></div>
+  <button type="button" class="ld-skip" id="ld-skip" onclick="finishGate()">略過，直接進入 →</button>
+</div>
 <div id="preload" class="preload" aria-live="polite">
-  <div class="pl-row"><span class="pl-title" id="pl-title">素材預載中</span><span id="pl-pct">0%</span></div>
+  <div class="pl-row"><span class="pl-title" id="pl-title">動態立繪下載中</span><span id="pl-pct">0%</span></div>
   <div class="pl-bar"><div class="pl-fill" id="pl-fill"></div></div>
-  <div class="pl-sub" id="pl-sub">第一次開啟需下載動態立繪，之後會直接從本機讀取</div>
+  <div class="pl-sub" id="pl-sub">下載完成前先顯示靜態立繪</div>
 </div>
 <div id="net-overlay" class="net-overlay">
   <div class="net-box zh">
@@ -574,6 +586,9 @@
       <span class="tb-event zh" id="tb-event" data-meta="event" spellcheck="false">鳴潮 BP 賽事</span>
     </div>
     <div class="tb-side right">
+      <span class="tb-info zh" id="pg-room"></span>
+      <span class="tb-info zh" id="pg-conn"></span>
+      <span class="tb-sep" id="tb-info-sep"></span>
       <span class="tb-org zh"><span class="k">主辦人</span><span class="v" id="tb-org" data-meta="organizer" spellcheck="false">—</span></span>
       <span class="tb-sep"></span>
       <div style="position: relative">
@@ -597,11 +612,6 @@
     </div>
   </header>
 
-  <div class="progress" id="progress">
-    <span class="pg-info l" id="pg-room"></span>
-    <div id="pg-cells" style="display:flex;align-items:center;gap:4px"></div>
-    <span class="pg-info r" id="pg-conn"></span>
-  </div>
 
   <section class="stage is-waiting" id="stage">
     <div class="art" id="art"><img class="static" id="art-img" alt=""><div class="spine-host" id="art-spine"></div></div>
@@ -1109,6 +1119,7 @@ function resetLocalState() {
 function enterRoom() {
   inRoom = true;
   document.body.classList.add('in-room');
+  showGate();
   $('net-overlay').style.display = 'none';
   document.body.classList.toggle('role-viewer', myRole === 'viewer');
   $('btn-ref').style.display = myRole === 'referee' ? '' : 'none';
@@ -1350,17 +1361,7 @@ function buildStrips() {
     }
   });
 }
-function buildProgress() {
-  const wrap = $('pg-cells'); wrap.innerHTML = '';
-  state.steps.forEach((s, i) => {
-    const d = document.createElement('div');
-    d.className = 'pg ' + (s.team === 'blue' ? 'b' : 'r');
-    if (i > 0 && s.t !== state.steps[i - 1].t) d.classList.add('gap');
-    d.textContent = s.t === 'ban' ? '禁' : s.t === 'snipe' ? '破' : s.n;
-    d.title = `${teamZh(s.team)} ${s.t === 'ban' ? '禁用' : s.t === 'snipe' ? '破壞' : '第 ' + s.n + ' 選'}`;
-    wrap.appendChild(d);
-  });
-}
+function buildProgress() {}   // 舊的步驟進度條已移除
 function stepLabel(s) {
   if (!s) return 'BP 完成';
   if (s.t === 'ban') return `${teamZh(s.team)} 禁用`;
@@ -1380,14 +1381,10 @@ function render() {
   const isRef = myRole === 'referee';
   ['tb-event', 'tb-org'].forEach(id => $(id).contentEditable = isRef ? 'true' : 'false');
 
-  // 進度條
-  [...$('pg-cells').children].forEach((el, i) => {
-    el.classList.toggle('done', i < state.stepIdx);
-    el.classList.toggle('cur', i === state.stepIdx);
-  });
   const code = isHost ? (peer && peer.id ? peer.id.replace('BP', '') : '') : (hostConn && hostConn.peer ? hostConn.peer.replace('BP', '') : '');
   $('pg-room').innerHTML = offlineMode ? '單機測試' : (code ? `房號 ${esc(code)}` : '');
   const online = isHost ? connections.map(x => x.role) : guestOnline;
+  $('tb-info-sep').style.display = (offlineMode || code) ? '' : 'none';
   $('pg-conn').innerHTML = offlineMode ? '' :
     `<span class="${online.includes('blue') || myRole === 'blue' ? 'on' : 'off'}">●</span> 藍　<span class="${online.includes('red') || myRole === 'red' ? 'on' : 'off'}">●</span> 紅　觀戰 ${online.filter(r => r === 'viewer').length + (myRole === 'viewer' ? 1 : 0)}`;
 
@@ -1883,62 +1880,96 @@ document.addEventListener('keydown', e => {
 });
 
 /* ============================================================
-   素材預載：背景把頭像、立繪、動態立繪先下載並存進瀏覽器快取（sw.js）
-   第一次較久，之後開網頁直接從本機讀取
+   素材預載（sw.js 快取）
+   1. 頭像、靜態立繪、圖標：進房前顯示讀取畫面等它跑完
+   2. 動態立繪：進房後在背景繼續下載（左下角小進度條）
+   下載過的素材存在瀏覽器裡，下次開啟直接從本機讀取
    ============================================================ */
 const ASSET_CACHE = 'bp-assets-v1';
+const pre = { essTotal: 0, essDone: 0, essReady: false, waiters: [] };
+function essentialsDone() { pre.essReady = true; pre.waiters.splice(0).forEach(f => f()); }
 async function preloadAssets() {
-  if (FILE_MODE || !('caches' in window) || !('serviceWorker' in navigator)) return;
-  try { await navigator.serviceWorker.register('./sw.js'); } catch (e) { return; }
-  let man;
-  try { const r = await fetch('./assets.json', { cache: 'no-store' }); if (!r.ok) return; man = await r.json(); } catch (e) { return; }
-  const cache = await caches.open(ASSET_CACHE);
-  const keyOf = p => { const u = new URL(p, location.href); return u.origin + u.pathname; };
-  const HKEY = keyOf('./__asset-hashes');
-  let old = {};
-  try { const r = await cache.match(HKEY); if (r) old = await r.json(); } catch (e) {}
-  const have = new Set((await cache.keys()).map(r => r.url));
-  // 先頭像／圖標，再靜態立繪，最後依角色排序的動態立繪
-  const charRank = {}; chars.forEach((c, i) => { const sp = SPINE_MAP[c.id]; if (sp && !(sp[0] in charRank)) charRank[sp[0]] = i; });
-  const rank = p => p.startsWith('spine/') ? 200 + (charRank[p.split('/')[1]] ?? 199) : p.startsWith('portrait/') ? 100 : 0;
-  const all = Object.entries(man.files).sort((a, b) => rank(a[0]) - rank(b[0]));
-  const todo = all.filter(([p, f]) => old[p] !== f.h || !have.has(keyOf('./' + p)));
-  if (!todo.length) return;
-  const total = todo.reduce((n, [, f]) => n + f.s, 0);
-  let doneBytes = 0, doneCount = 0, failed = 0;
-  const box = $('preload'), MB = b => (b / 1048576).toFixed(1);
-  box.classList.add('show');
-  const paint = () => {
-    const pct = Math.floor(doneBytes / total * 100);
-    $('pl-pct').textContent = pct + '%';
-    $('pl-fill').style.width = pct + '%';
-    $('pl-sub').textContent = `${MB(doneBytes)} / ${MB(total)} MB · 第一次開啟需下載，之後會直接從本機讀取`;
-  };
-  paint();
-  let saveTimer = null;
-  const saveHashes = () => cache.put(HKEY, new Response(JSON.stringify(old), { headers: { 'Content-Type': 'application/json' } })).catch(() => {});
-  let i = 0;
-  const worker = async () => {
-    while (i < todo.length) {
-      const [p, f] = todo[i++];
-      try {
-        const res = await fetch('./' + p.split('/').map(encodeURIComponent).join('/') + '?__pre=' + f.h, { cache: 'no-cache' });
-        if (!res.ok) throw 0;
-        await cache.put(keyOf('./' + p), res);
-        old[p] = f.h;
-        if (!saveTimer) saveTimer = setTimeout(() => { saveTimer = null; saveHashes(); }, 1500);
-      } catch (e) { failed++; }
-      doneBytes += f.s; doneCount++; paint();
+  try {
+    if (FILE_MODE || !('caches' in window) || !('serviceWorker' in navigator)) return essentialsDone();
+    try { await navigator.serviceWorker.register('./sw.js'); } catch (e) { return essentialsDone(); }
+    const r = await fetch('./assets.json', { cache: 'no-store' }).catch(() => null);
+    if (!r || !r.ok) return essentialsDone();
+    const man = await r.json();
+    const cache = await caches.open(ASSET_CACHE);
+    const keyOf = p => { const u = new URL(p, location.href); return u.origin + u.pathname; };
+    const HKEY = keyOf('./__asset-hashes');
+    let old = {};
+    try { const h = await cache.match(HKEY); if (h) old = await h.json(); } catch (e) {}
+    const have = new Set((await cache.keys()).map(x => x.url));
+    const charRank = {}; chars.forEach((c, i) => { const sp = SPINE_MAP[c.id]; if (sp && !(sp[0] in charRank)) charRank[sp[0]] = i; });
+    const rank = p => p.startsWith('spine/') ? 200 + (charRank[p.split('/')[1]] ?? 199) : p.startsWith('portrait/') ? 100 : 0;
+    const todo = Object.entries(man.files).filter(([p, f]) => old[p] !== f.h || !have.has(keyOf('./' + p))).sort((a, b) => rank(a[0]) - rank(b[0]));
+    const ess = todo.filter(([p]) => !p.startsWith('spine/')), spine = todo.filter(([p]) => p.startsWith('spine/'));
+    pre.essTotal = ess.reduce((n, [, f]) => n + f.s, 0);
+    let saveTimer = null;
+    const saveHashes = () => cache.put(HKEY, new Response(JSON.stringify(old), { headers: { 'Content-Type': 'application/json' } })).catch(() => {});
+    const run = async (list, onEach) => {
+      let i = 0, failed = 0;
+      const worker = async () => {
+        while (i < list.length) {
+          const [p, f] = list[i++];
+          try {
+            const res = await fetch('./' + p.split('/').map(encodeURIComponent).join('/') + '?__pre=' + f.h, { cache: 'no-cache' });
+            if (!res.ok) throw 0;
+            await cache.put(keyOf('./' + p), res);
+            old[p] = f.h;
+            if (!saveTimer) saveTimer = setTimeout(() => { saveTimer = null; saveHashes(); }, 1500);
+          } catch (e) { failed++; }
+          onEach(f.s);
+        }
+      };
+      await Promise.all([worker(), worker(), worker(), worker(), worker(), worker()]);
+      return failed;
+    };
+    if (ess.length) await run(ess, b => { pre.essDone += b; paintGate(); });
+    essentialsDone();
+    if (spine.length) {
+      const box = $('preload'), MB = b => (b / 1048576).toFixed(1);
+      const total = spine.reduce((n, [, f]) => n + f.s, 0); let done = 0;
+      const paint = () => { const pct = Math.floor(done / total * 100); $('pl-pct').textContent = pct + '%'; $('pl-fill').style.width = pct + '%'; $('pl-sub').textContent = `${MB(done)} / ${MB(total)} MB · 下載完成前先顯示靜態立繪`; };
+      box.classList.add('show'); paint();
+      const failed = await run(spine, b => { done += b; paint(); });
+      box.classList.add('done');
+      $('pl-title').textContent = failed ? `動態立繪下載完成（${failed} 個失敗）` : '✓ 動態立繪已全部載入';
+      $('pl-pct').textContent = '100%'; $('pl-fill').style.width = '100%'; $('pl-sub').textContent = '之後開啟會直接從本機讀取';
+      setTimeout(() => box.classList.add('fade'), 4000);
+      setTimeout(() => box.classList.remove('show', 'fade'), 4800);
     }
-  };
-  await Promise.all([worker(), worker(), worker(), worker()]);
-  clearTimeout(saveTimer); await saveHashes();
-  box.classList.add('done');
-  $('pl-title').textContent = failed ? `素材載入完成（${failed} 個失敗）` : '✓ 素材已全部載入';
-  $('pl-pct').textContent = '100%'; $('pl-fill').style.width = '100%';
-  $('pl-sub').textContent = '之後開啟會直接從本機讀取';
-  setTimeout(() => box.classList.add('fade'), 4000);
-  setTimeout(() => box.classList.remove('show', 'fade'), 4800);
+    clearTimeout(saveTimer); await saveHashes();
+  } catch (e) { essentialsDone(); }
+}
+// 讀取畫面：進房時若必要素材還沒好就蓋住畫面，跑到 100% 再淡出
+let gateOpen = false, gateSkipTimer = null;
+function paintGate() {
+  if (!gateOpen) return;
+  const pct = pre.essReady ? 100 : pre.essTotal ? Math.min(99, Math.floor(pre.essDone / pre.essTotal * 100)) : 0;
+  $('ld-pct').textContent = pct + '%';
+  $('ld-fill').style.width = pct + '%';
+  $('ld-icon').style.left = pct + '%';
+  $('loader').setAttribute('aria-valuenow', pct);
+  $('ld-sub').textContent = pre.essTotal ? `${(pre.essDone / 1048576).toFixed(1)} / ${(pre.essTotal / 1048576).toFixed(1)} MB` : '準備中…';
+}
+function showGate() {
+  if (pre.essReady || gateOpen) return;
+  gateOpen = true;
+  pre.waiters.push(() => { if (!$('loader').classList.contains('show')) return finishGate(); paintGate(); setTimeout(finishGate, 450); });
+  setTimeout(() => { if (gateOpen) openGate(); }, 150);   // 已快取時幾乎瞬間完成，不閃讀取畫面
+}
+function openGate() {
+  $('loader').classList.remove('out'); $('loader').classList.add('show'); $('ld-skip').classList.remove('show');
+  paintGate();
+  gateSkipTimer = setTimeout(() => $('ld-skip').classList.add('show'), 8000);
+}
+function finishGate() {
+  if (!gateOpen) return;
+  gateOpen = false; clearTimeout(gateSkipTimer);
+  $('loader').classList.add('out');
+  setTimeout(() => $('loader').classList.remove('show', 'out'), 420);
 }
 
 /* ============================================================
