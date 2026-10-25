@@ -100,11 +100,15 @@
   .loader.show { display: flex; }
   .loader.out { opacity: 0; pointer-events: none; }
   .loader .ld-title { font-size: 15px; font-weight: 700; letter-spacing: 4px; color: var(--sub); }
-  .loader .ld-track { position: relative; width: min(560px, 80vw); height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); }
+  .loader .ld-track { position: relative; width: min(560px, 80vw); height: 6px; margin-bottom: 40px; border-radius: 3px; background: rgba(255,255,255,0.08); }
   .loader .ld-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: linear-gradient(90deg, #8a6508, var(--gold)); box-shadow: 0 0 12px rgba(251,191,36,0.6); transition: width 0.25s ease-out; }
-  .loader .ld-icon { position: absolute; top: 50%; left: 0; width: 46px; height: 46px; object-fit: contain; transform: translate(-50%, -62%); transition: left 0.25s ease-out; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6)); animation: ld-bob 0.6s ease-in-out infinite alternate; }
+  .loader .ld-runner { position: absolute; top: 50%; left: 0; width: 0; height: 0; transition: left 0.25s ease-out; }
+  .loader .ld-runner img { position: absolute; left: 0; top: 0; width: 46px; height: 46px; object-fit: contain; transform: translate(-50%, -62%); filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6)); animation: ld-bob 0.6s ease-in-out infinite alternate; }
+  .loader .ld-text { position: absolute; left: 0; top: 26px; transform: translateX(-50%); white-space: nowrap; font-size: 13px; font-weight: 700; letter-spacing: 2px; color: var(--sub); }
+  .loader .ld-text i { font-style: normal; animation: ld-dot 1.2s infinite; opacity: 0.2; }
+  .loader .ld-text i:nth-child(2) { animation-delay: 0.2s; } .loader .ld-text i:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes ld-dot { 0%, 60%, 100% { opacity: 0.2; } 30% { opacity: 1; } }
   @keyframes ld-bob { from { margin-top: 0; } to { margin-top: -6px; } }
-  .loader .ld-row { width: min(560px, 80vw); display: flex; justify-content: space-between; font-size: 12px; color: #888; letter-spacing: 1px; }
   .loader .ld-pct { font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; color: var(--gold); }
   .loader .ld-skip { background: none; border: none; color: #666; font-size: 12px; cursor: pointer; letter-spacing: 1px; visibility: hidden; }
   .loader .ld-skip.show { visibility: visible; } .loader .ld-skip:hover { color: var(--gold); }
@@ -162,7 +166,8 @@
   .tb-sep { width: 1px; height: 26px; background: #333; flex-shrink: 0; }
   .tb-logo { height: 34px; width: auto; flex-shrink: 0; }
   .tb-event { font-size: clamp(14px, 1.05vw, 20px); font-weight: 800; letter-spacing: 3px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; outline: none; }
-  .tb-center { display: flex; align-items: center; gap: 12px; }
+  .tb-title { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 14px; max-width: 34vw; z-index: 1; }
+  .tb-title .tb-event { text-align: center; }
   .tb-org { display: flex; align-items: center; gap: 8px; font-size: clamp(12px, 0.85vw, 16px); font-weight: 700; white-space: nowrap; min-width: 0; }
   .tb-org .k { color: var(--muted); }
   .tb-org .v { color: #fff; outline: none; overflow: hidden; text-overflow: ellipsis; }
@@ -485,8 +490,7 @@
 <div id="loader" class="loader zh" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
   <div class="ld-title">載入素材中</div>
   <div class="ld-pct" id="ld-pct">0%</div>
-  <div class="ld-track"><div class="ld-fill" id="ld-fill"></div><img class="ld-icon" id="ld-icon" src="favicon.png" alt=""></div>
-  <div class="ld-row"><span id="ld-sub">準備中…</span><span>動態立繪會在背景繼續下載</span></div>
+  <div class="ld-track"><div class="ld-fill" id="ld-fill"></div><div class="ld-runner" id="ld-icon"><img src="favicon.png" alt=""><span class="ld-text">坨坨汐拼命加載中<i>.</i><i>.</i><i>.</i></span></div></div>
   <button type="button" class="ld-skip" id="ld-skip" onclick="finishGate()">略過，直接進入 →</button>
 </div>
 <div id="preload" class="preload" aria-live="polite">
@@ -581,9 +585,11 @@
           <button type="button" class="danger" id="rm-close" onclick="refAction('close')"><span class="l"><span class="ic">⏻</span>關閉房間</span><span class="kb"></span></button>
         </div>
       </div>
-      <span class="tb-sep"></span>
+    </div>
+    <div class="tb-title">
       <img class="tb-logo" src="logo.gif" alt="" onerror="this.remove()">
       <span class="tb-event zh" id="tb-event" data-meta="event" spellcheck="false">鳴潮 BP 賽事</span>
+      <img class="tb-logo" src="logo.gif" alt="" onerror="this.remove()">
     </div>
     <div class="tb-side right">
       <span class="tb-info zh" id="pg-room"></span>
@@ -1952,7 +1958,6 @@ function paintGate() {
   $('ld-fill').style.width = pct + '%';
   $('ld-icon').style.left = pct + '%';
   $('loader').setAttribute('aria-valuenow', pct);
-  $('ld-sub').textContent = pre.essTotal ? `${(pre.essDone / 1048576).toFixed(1)} / ${(pre.essTotal / 1048576).toFixed(1)} MB` : '準備中…';
 }
 function showGate() {
   if (pre.essReady || gateOpen) return;
