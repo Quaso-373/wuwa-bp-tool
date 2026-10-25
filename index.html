@@ -277,6 +277,34 @@
   .waiting .w-vs .b { color: var(--blue); text-shadow: 0 0 10px rgba(59,130,246,0.6); }
   .waiting .w-vs .r { color: var(--red); text-shadow: 0 0 10px rgba(239,68,68,0.6); }
   .waiting .w-vs .v { font-style: italic; color: var(--gold); }
+  /* 準備階段 */
+  .ready-box { display: none; flex-direction: column; align-items: center; gap: 2.2vh; margin-top: 1vh; }
+  .stage.not-started .ready-box { display: flex; }
+  .stage.not-started .w-hint { display: none; }
+  .stage.not-started .waiting { gap: 1.4vh; }
+  .stage.not-started .waiting > img { height: 13vh; }
+  .rd-title { font-size: 14px; letter-spacing: 6px; color: var(--sub); font-weight: 700; }
+  .rd-teams { display: flex; gap: 3vw; }
+  .rd-team { width: clamp(180px, 13vw, 260px); padding: 14px 16px; border-radius: 12px; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); transition: 0.3s; }
+  .rd-team img { width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; }
+  .rd-team .rd-txt { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .rd-team .rd-name { font-size: 15px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rd-team .rd-state { font-size: 12px; font-weight: 700; letter-spacing: 2px; color: var(--muted); }
+  .rd-team.on.b { border-color: var(--blue); background: rgba(59,130,246,0.14); box-shadow: 0 0 22px rgba(59,130,246,0.35); }
+  .rd-team.on.r { border-color: var(--red); background: rgba(239,68,68,0.14); box-shadow: 0 0 22px rgba(239,68,68,0.35); }
+  .rd-team.on .rd-state { color: #6ee7b7; }
+  .rd-actions { display: flex; gap: 12px; }
+  .rd-btn { min-width: 200px; height: 52px; padding: 0 28px; border-radius: 26px; border: 2px solid var(--gold); background: linear-gradient(180deg, #f5c542, #c9970f); color: #1a1205; font-size: 18px; font-weight: 900; letter-spacing: 6px; cursor: pointer; box-shadow: 0 0 24px rgba(251,191,36,0.45); transition: 0.2s; }
+  .rd-btn:hover { transform: translateY(-2px); box-shadow: 0 0 34px rgba(251,191,36,0.7); }
+  .rd-btn.cancel { background: transparent; color: var(--gold); box-shadow: none; }
+  .rd-force { height: 52px; padding: 0 20px; border-radius: 26px; border: 1px solid rgba(251,191,36,0.5); background: rgba(251,191,36,0.08); color: var(--gold); font-size: 14px; font-weight: 700; letter-spacing: 2px; cursor: pointer; }
+  .rd-force:hover { background: rgba(251,191,36,0.18); }
+  .rd-btn[hidden], .rd-force[hidden] { display: none; }
+  .countdown { position: absolute; inset: 0; z-index: 30; display: none; align-items: center; justify-content: center; background: rgba(5,5,8,0.55); pointer-events: none; }
+  .countdown.show { display: flex; }
+  .countdown span { font-family: 'Rajdhani', sans-serif; font-size: 22vh; font-weight: 700; color: var(--gold); text-shadow: 0 0 40px rgba(251,191,36,0.7); animation: cd-pop 0.9s cubic-bezier(0.16,1,0.3,1); }
+  .countdown span.go { font-family: 'Noto Sans TC', sans-serif; font-size: 11vh; font-weight: 900; letter-spacing: 1.5vh; color: #fff; text-shadow: 0 0 30px rgba(251,191,36,0.9); }
+  @keyframes cd-pop { 0% { transform: scale(1.8); opacity: 0; } 30% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.92); opacity: 0.85; } }
   .waiting .w-hint { font-size: 14px; letter-spacing: 4px; color: var(--muted); font-family: 'Noto Sans TC', sans-serif; }
 
   /* 中段列 */
@@ -579,6 +607,7 @@
           <div class="hd">裁判工具</div>
           <button type="button" id="rm-undo" onclick="refAction('undo')"><span class="l"><span class="ic">↶</span>上一步</span><span class="kb">Ctrl+Z</span></button>
           <button type="button" id="rm-timer" onclick="refAction('timer')"><span class="l"><span class="ic">⏱</span><span id="rm-timer-label">暫停計時</span></span><span class="kb">T</span></button>
+          <button type="button" id="rm-force" onclick="refAction('force')"><span class="l"><span class="ic">▶</span>強制開始</span><span class="kb"></span></button>
           <button type="button" id="rm-proxy" onclick="refAction('proxy')"><span class="l"><span class="ic">✎</span>代點選角</span><span class="kb"></span></button>
           <button type="button" onclick="refAction('reset')"><span class="l"><span class="ic">↻</span>重置，進入下一局</span><span class="kb"></span></button>
           <button type="button" onclick="refAction('copy')"><span class="l"><span class="ic">⧉</span>複製戰報</span><span class="kb"></span></button>
@@ -628,7 +657,19 @@
       <span class="w-event zh" id="w-event">鳴潮 BP 賽事</span>
       <div class="w-vs"><span class="b" id="w-blue">BLUE TEAM</span><span class="v">VS</span><span class="r" id="w-red">RED TEAM</span></div>
       <span class="w-hint" id="w-hint">等待禁用開始</span>
+      <div class="ready-box zh">
+        <div class="rd-title" id="rd-title">等待雙方準備</div>
+        <div class="rd-teams">
+          <div class="rd-team b" id="rd-blue"><img src="phoebe.png" alt="" onerror="this.remove()"><div class="rd-txt"><span class="rd-name" id="rd-blue-name">BLUE TEAM</span><span class="rd-state" id="rd-blue-state">未準備</span></div></div>
+          <div class="rd-team r" id="rd-red"><img src="nunu.png" alt="" onerror="this.remove()"><div class="rd-txt"><span class="rd-name" id="rd-red-name">RED TEAM</span><span class="rd-state" id="rd-red-state">未準備</span></div></div>
+        </div>
+        <div class="rd-actions">
+          <button type="button" class="rd-btn" id="rd-btn" onclick="toggleReady()" hidden>準備</button>
+          <button type="button" class="rd-force" id="rd-force" onclick="forceStart()" hidden>強制開始</button>
+        </div>
+      </div>
     </div>
+    <div class="countdown" id="countdown"><span id="cd-num"></span></div>
   </section>
 
   <section class="midbar">
@@ -863,6 +904,7 @@ const state = {
   format: 'standard', steps: buildSteps('standard'), stepIdx: 0, history: [], used: new Set(),
   blueName: 'BLUE TEAM', redName: 'RED TEAM',
   meta: { event: '鳴潮 BP 賽事', organizer: '—' },
+  ready: { blue: false, red: false }, started: false, startAt: 0,
   timerDuration: 60, timerEnabled: true, timeoutMode: 'pause', turnStartAt: 0,
   preview: null,   // 選擇中（尚未確認）的角色：{ step, cid }
 };
@@ -1120,6 +1162,26 @@ function resetLocalState() {
   state.timerDuration = td; state.timerEnabled = td > 0; state.timeoutMode = $('cfg-timeout').value;
   state.meta = { event: $('cfg-event').value.trim() || '鳴潮 BP 賽事', organizer: $('cfg-organizer').value.trim() || '—' };
   lastHistSig = null; lastPendingKey = null; state.preview = null; modalMinimized = false; proxyPick = false;
+  state.ready = { blue: false, red: false }; state.started = false; state.startAt = 0;
+}
+/* 時間：房客以房主的時鐘為準（每次同步校正），倒數與計時才會一致 */
+let clockOffset = 0;
+function nowH() { return Date.now() + clockOffset; }
+// BP 是否已正式開始（雙方準備、3-2-1 倒數結束）
+function bpLive() { return !!state.started && nowH() >= (state.startAt || 0); }
+function startBP() {
+  if (state.started) return;
+  state.started = true; state.startAt = nowH() + 3000; state.turnStartAt = state.startAt;
+  const m = '雙方準備完成，BP 即將開始！';
+  executeChatMsg('system', '系統', m); broadcastChat('system', '系統', m);
+}
+function toggleReady() {
+  if (myRole !== 'blue' && myRole !== 'red') return;
+  dispatch({ type: 'ready', team: myRole, on: !state.ready[myRole] });
+}
+function forceStart() {
+  if (myRole !== 'referee') return;
+  uiConfirm('強制開始', '不等雙方準備，直接開始 BP？', '開始', false).then(ok => { if (ok) dispatch({ type: 'force-start' }); });
 }
 
 function enterRoom() {
@@ -1180,7 +1242,7 @@ function joinRoom() {
 function startOffline() {
   myNickname = $('my-nickname').value.trim() || '單機測試'; myRole = 'referee';
   offlineMode = true; isHost = true;
-  resetLocalState(); beginTurnTimer(); enterRoom();
+  resetLocalState(); state.started = true; state.startAt = 0; beginTurnTimer(); enterRoom();
 }
 
 async function backToLobby() {
@@ -1242,7 +1304,11 @@ function onHostReceive(conn, data) {
     if (!roleCanActNow(senderRole)) return;
     applyAuthoritativeAction({ type: 'preview', cid: data.cid }); return;
   }
-  if (['undo', 'timer', 'soft-reset', 'meta'].includes(data.type)) {
+  if (data.type === 'ready') {
+    if (senderRole !== data.team || state.started) return;
+    applyAuthoritativeAction({ type: 'ready', team: data.team, on: !!data.on }); return;
+  }
+  if (['undo', 'timer', 'soft-reset', 'meta', 'force-start'].includes(data.type)) {
     if (senderRole !== 'referee') return;
     applyAuthoritativeAction(data); return;
   }
@@ -1257,6 +1323,7 @@ function onGuestLeave(conn) {
   const left = connections.splice(i, 1)[0];
   const msg = `${left.nickname}（${getRoleDisplayName(left.role)}）已離線`;
   pushSystemMsg(msg); broadcastChat('system', '系統', msg);
+  if (!state.started && state.ready[left.role]) { state.ready[left.role] = false; broadcastSync(); }
   render();
 }
 function onGuestReceive(data) {
@@ -1269,7 +1336,8 @@ function buildSyncPayload() {
   return { type: 'sync', format: state.format, stepIdx: state.stepIdx, history: state.history,
     blueName: state.blueName, redName: state.redName, meta: state.meta,
     timerDuration: state.timerDuration, timerEnabled: state.timerEnabled, timeoutMode: state.timeoutMode, turnStartAt: state.turnStartAt,
-    preview: state.preview, online: connections.map(x => x.role) };
+    preview: state.preview, online: connections.map(x => x.role),
+    ready: state.ready, started: state.started, startAt: state.startAt, now: Date.now() };
 }
 function broadcastSync() { const p = buildSyncPayload(); connections.forEach(x => { if (x.conn.open) x.conn.send(p); }); }
 let guestOnline = [];
@@ -1281,12 +1349,14 @@ function applySync(d) {
   state.used = new Set(state.history.filter(h => h.type === 'pool').map(h => h.cid));
   guestOnline = d.online || [];
   state.preview = d.preview || null;
+  state.ready = d.ready || { blue: false, red: false }; state.started = !!d.started; state.startAt = d.startAt || 0;
+  if (d.now) clockOffset = d.now - Date.now();
   if (formatChanged) buildProgress();
   render();
 }
 
 function roleCanActNow(role) {
-  const s = curStep(); if (!s) return false;
+  const s = curStep(); if (!s || !bpLive()) return false;
   if (role === 'referee') return true;
   if (role === 'viewer') return false;
   return s.team === role;
@@ -1333,6 +1403,8 @@ function applyActionToState(a) {
       const last = state.history.pop(); if (!last) return;
       state.stepIdx = last.step; if (last.type === 'pool') state.used.delete(last.cid); break;
     }
+    case 'ready': if (state.started) return; state.ready[a.team] = !!a.on; if (state.ready.blue && state.ready.red) startBP(); break;
+    case 'force-start': startBP(); break;
     case 'timer': state.timerEnabled = !state.timerEnabled; if (state.timerEnabled) beginTurnTimer(); break;
     case 'team-name': state[a.team + 'Name'] = String(a.name || '').trim().slice(0, 12) || (a.team === 'blue' ? 'BLUE TEAM' : 'RED TEAM'); break;
     case 'meta': state.meta = Object.assign({}, state.meta, a.meta); break;
@@ -1344,6 +1416,7 @@ function applyActionToState(a) {
     case 'soft-reset': {
       state.stepIdx = 0; state.history = []; state.used.clear();
       state.timerEnabled = state.timerDuration > 0;
+      if (!offlineMode) { state.started = false; state.startAt = 0; state.ready = { blue: false, red: false }; }
       beginTurnTimer();
       const m = '裁判已重置 BP 畫面，進入下一局！';
       executeChatMsg('system', '系統', m); broadcastChat('system', '系統', m);
@@ -1406,7 +1479,7 @@ function render() {
   $('w-blue').textContent = state.blueName; $('w-red').textContent = state.redName;
 
   // 狀態與頭像條
-  $('status').textContent = s ? stepLabel(s) + (s.t === 'snipe' ? '・點擊對手角色' : ' 進行中') : 'BP 完成';
+  $('status').textContent = !state.started ? '等待雙方準備' : !bpLive() ? 'BP 即將開始' : s ? stepLabel(s) + (s.t === 'snipe' ? '・點擊對手角色' : ' 進行中') : 'BP 完成';
   $('status').style.color = !s ? 'var(--gold)' : s.team === 'blue' ? '#93c5fd' : '#fca5a5';
   // 頭像條與 BAN 格：先算出每格該顯示的角色，只有角色改變時才換圖，避免每次同步都閃爍
   const usedSlots = new Set(state.steps.filter(x => x.id).map(x => x.id));
@@ -1445,6 +1518,20 @@ function render() {
   $('rm-timer-label').textContent = state.timerEnabled ? '暫停計時' : '繼續計時';
   $('rm-proxy').disabled = !s || s.t === 'snipe';
   $('w-hint').textContent = s ? `${stepLabel(s)} 即將開始` : '';
+  // 準備階段
+  $('stage').classList.toggle('not-started', !state.started);
+  ['blue', 'red'].forEach(t => {
+    $('rd-' + t).classList.toggle('on', !!state.ready[t]);
+    $('rd-' + t + '-name').textContent = state[t + 'Name'];
+    const here = t === myRole || (isHost ? connections.some(x => x.role === t) : guestOnline.includes(t));
+    $('rd-' + t + '-state').textContent = state.ready[t] ? '✓ 已準備' : here ? '準備中…' : '尚未進入';
+  });
+  const amPlayer = myRole === 'blue' || myRole === 'red';
+  $('rd-btn').hidden = !amPlayer;
+  if (amPlayer) { const on = !!state.ready[myRole]; $('rd-btn').textContent = on ? '取消準備' : '準備'; $('rd-btn').classList.toggle('cancel', on); }
+  $('rd-force').hidden = myRole !== 'referee';
+  $('rd-title').textContent = myRole === 'viewer' ? '等待雙方準備' : amPlayer ? (state.ready[myRole] ? '等待對手準備' : '準備好了就按下按鈕') : '等待雙方準備（裁判可強制開始）';
+  $('rm-force').style.display = state.started ? 'none' : '';
 
   updateSpotlight();
   updateModal();
@@ -1525,7 +1612,7 @@ function showSpotlight(h, fresh) {
    選角彈窗
    ============================================================ */
 function myTurnToPick() {
-  const s = curStep(); if (!inRoom || !s || s.t === 'snipe') return false;
+  const s = curStep(); if (!inRoom || !s || s.t === 'snipe' || !bpLive()) return false;
   if (myRole === 'referee') return offlineMode || proxyPick;
   return s.team === myRole;
 }
@@ -1630,21 +1717,51 @@ function disarmSlots() {
 /* ============================================================
    計時
    ============================================================ */
-let timerInterval = null, lastBeep = -1;
-function beginTurnTimer() { state.turnStartAt = Date.now(); }
+let timerInterval = null, lastBeep = '', lastLive = false;
+function beginTurnTimer() { state.turnStartAt = Math.max(nowH(), state.startAt || 0); }
 function startTimer() {
   clearInterval(timerInterval);
   const tick = () => {
     const els = [$('timer'), $('m-timer')];
+    paintCountdown();
+    const live = bpLive();
+    if (live !== lastLive) { lastLive = live; if (live) { render(); return; } }   // 倒數結束：開啟選角視窗
     if (!curStep()) { els.forEach(e => { e.textContent = '--'; e.classList.remove('warning'); }); return; }
     if (!state.timerEnabled || !state.timerDuration) { els.forEach(e => { e.textContent = '∞'; e.classList.remove('warning'); }); return; }
-    const left = Math.max(0, state.timerDuration - Math.floor((Date.now() - state.turnStartAt) / 1000));
+    if (!bpLive()) { els.forEach(e => { e.textContent = state.timerDuration; e.classList.remove('warning'); }); return; }
+    const left = Math.min(state.timerDuration, Math.max(0, state.timerDuration - Math.floor((nowH() - state.turnStartAt) / 1000)));
     els.forEach(e => { e.textContent = left; e.classList.toggle('warning', left <= 5); });
-    if (left <= 5 && left >= 1 && left !== lastBeep && (roleCanActNow(myRole) && myRole !== 'viewer')) { lastBeep = left; playTick(left === 1); }
-    if (left > 5) lastBeep = -1;
+    // 剩 10 秒、5 秒：播放輪到的那一隊的提示音（全場都聽得到）
+    const cueKey = state.stepIdx + ':' + state.turnStartAt + ':' + left;
+    if ((left === 10 || left === 5) && state.timerDuration > left && cueKey !== lastBeep) { lastBeep = cueKey; playTeamCue(curStep().team); }
     if (left <= 0) { clearInterval(timerInterval); if (isHost) handleTimeout(); }
   };
-  tick(); timerInterval = setInterval(tick, 250);
+  tick(); timerInterval = setInterval(tick, 200);
+}
+/* 開始前的 3、2、1 倒數 */
+let cdShown = '';
+function paintCountdown() {
+  const box = $('countdown');
+  if (!state.started || !state.startAt) { if (cdShown) { cdShown = ''; box.classList.remove('show'); } return; }
+  const ms = state.startAt - nowH();
+  let txt = '';
+  if (ms > 0 && ms <= 3200) txt = String(Math.ceil(ms / 1000));
+  else if (ms <= 0 && ms > -900) txt = 'BP 開始';
+  if (txt === cdShown) return;
+  cdShown = txt;
+  if (!txt) { box.classList.remove('show'); return; }
+  const sp = $('cd-num'); sp.textContent = txt; sp.className = txt === 'BP 開始' ? 'go' : '';
+  sp.style.animation = 'none'; void sp.offsetWidth; sp.style.animation = '';
+  box.classList.add('show');
+  playTick(txt === 'BP 開始');
+}
+const teamCue = {};
+function playTeamCue(team) {
+  try {
+    const src = team === 'red' ? 'nunu.mp3' : 'phoebe.mp3';
+    const a = teamCue[src] || (teamCue[src] = new Audio(src));
+    a.volume = Math.max(0, Math.min(1, voiceVolume)); a.currentTime = 0; a.play().catch(() => {});
+  } catch (e) {}
 }
 let timeoutHandledFor = -1;
 function handleTimeout() {
@@ -1687,6 +1804,7 @@ function refAction(act) {
   closeDrops();
   if (act === 'undo') dispatch({ type: 'undo' });
   else if (act === 'timer') dispatch({ type: 'timer' });
+  else if (act === 'force') forceStart();
   else if (act === 'proxy') { proxyPick = true; modalMinimized = false; updateModal(); }
   else if (act === 'reset') { uiConfirm('重置，進入下一局', '會清空目前的禁用與選角紀錄，連線不會中斷。', '確定重置', true).then(ok => { if (ok) dispatch({ type: 'soft-reset' }); }); }
   else if (act === 'copy') copyResult();
