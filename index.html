@@ -95,6 +95,20 @@
   .net-box select option { background: #16161e; color: #fff; }
   .offline-link { display: block; margin: 18px auto 4px; background: none; border: none; color: #777; font-size: 13px; cursor: pointer; letter-spacing: 1px; padding: 6px; }
   .offline-link:hover { color: var(--gold); }
+  /* 素材預載進度 */
+  .preload { position: fixed; left: 16px; bottom: 16px; z-index: 10001; width: 260px; padding: 10px 14px 12px; border-radius: 10px; background: rgba(12,12,18,0.92); border: 1px solid rgba(251,191,36,0.35); box-shadow: 0 8px 24px rgba(0,0,0,0.5); font-size: 12px; color: #ddd; letter-spacing: 0.5px; transition: opacity 0.6s, transform 0.6s; display: none; }
+  .preload.show { display: block; }
+  .preload.fade { opacity: 0; transform: translateY(8px); pointer-events: none; }
+  .preload .pl-row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+  .preload .pl-title { color: var(--gold); font-weight: 700; }
+  .preload .pl-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); overflow: hidden; }
+  .preload .pl-fill { height: 100%; width: 0; background: linear-gradient(90deg, #b8860b, var(--gold)); transition: width 0.3s; }
+  .preload .pl-sub { margin-top: 6px; color: #888; font-size: 11px; }
+  .preload.done { border-color: rgba(52,211,153,0.5); }
+  .preload.done .pl-title { color: #34d399; }
+  .preload.done .pl-fill { background: #34d399; }
+  body.in-room .preload:not(.done) { width: 200px; padding: 7px 10px 9px; bottom: 10px; opacity: 0.85; }
+  body.in-room .preload .pl-sub { display: none; }
 
   /* 規則彈窗 */
   .rules-modal { position: fixed; inset: 0; z-index: 10001; background: rgba(0,0,0,0.72); display: none; align-items: center; justify-content: center; padding: 20px; }
@@ -463,6 +477,11 @@
 </div>
 
 <!-- ======================= 網路大廳 ======================= -->
+<div id="preload" class="preload" aria-live="polite">
+  <div class="pl-row"><span class="pl-title" id="pl-title">素材預載中</span><span id="pl-pct">0%</span></div>
+  <div class="pl-bar"><div class="pl-fill" id="pl-fill"></div></div>
+  <div class="pl-sub" id="pl-sub">第一次開啟需下載動態立繪，之後會直接從本機讀取</div>
+</div>
 <div id="net-overlay" class="net-overlay">
   <div class="net-box zh">
     <div class="net-head">
@@ -1089,6 +1108,7 @@ function resetLocalState() {
 
 function enterRoom() {
   inRoom = true;
+  document.body.classList.add('in-room');
   $('net-overlay').style.display = 'none';
   document.body.classList.toggle('role-viewer', myRole === 'viewer');
   $('btn-ref').style.display = myRole === 'referee' ? '' : 'none';
@@ -1155,7 +1175,7 @@ function forceReturnToLobby(msg) {
   try { if (hostConn) hostConn.close(); } catch (e) {}
   connections.forEach(x => { try { x.conn.close(); } catch (e) {} }); connections.length = 0;
   try { if (peer && !peer.destroyed) peer.destroy(); } catch (e) {}
-  peer = null; hostConn = null; isHost = false; offlineMode = false; inRoom = false;
+  peer = null; hostConn = null; isHost = false; offlineMode = false; inRoom = false; document.body.classList.remove('in-room');
   $('room-code-wrap').classList.remove('show'); $('room-code-display').textContent = '';
   closeDrops(); $('modal').classList.remove('show'); $('reopen').classList.remove('show');
   stageArt.clear(); previewArt.clear();
@@ -1863,9 +1883,69 @@ document.addEventListener('keydown', e => {
 });
 
 /* ============================================================
+   素材預載：背景把頭像、立繪、動態立繪先下載並存進瀏覽器快取（sw.js）
+   第一次較久，之後開網頁直接從本機讀取
+   ============================================================ */
+const ASSET_CACHE = 'bp-assets-v1';
+async function preloadAssets() {
+  if (FILE_MODE || !('caches' in window) || !('serviceWorker' in navigator)) return;
+  try { await navigator.serviceWorker.register('./sw.js'); } catch (e) { return; }
+  let man;
+  try { const r = await fetch('./assets.json', { cache: 'no-store' }); if (!r.ok) return; man = await r.json(); } catch (e) { return; }
+  const cache = await caches.open(ASSET_CACHE);
+  const keyOf = p => { const u = new URL(p, location.href); return u.origin + u.pathname; };
+  const HKEY = keyOf('./__asset-hashes');
+  let old = {};
+  try { const r = await cache.match(HKEY); if (r) old = await r.json(); } catch (e) {}
+  const have = new Set((await cache.keys()).map(r => r.url));
+  // 先頭像／圖標，再靜態立繪，最後依角色排序的動態立繪
+  const charRank = {}; chars.forEach((c, i) => { const sp = SPINE_MAP[c.id]; if (sp && !(sp[0] in charRank)) charRank[sp[0]] = i; });
+  const rank = p => p.startsWith('spine/') ? 200 + (charRank[p.split('/')[1]] ?? 199) : p.startsWith('portrait/') ? 100 : 0;
+  const all = Object.entries(man.files).sort((a, b) => rank(a[0]) - rank(b[0]));
+  const todo = all.filter(([p, f]) => old[p] !== f.h || !have.has(keyOf('./' + p)));
+  if (!todo.length) return;
+  const total = todo.reduce((n, [, f]) => n + f.s, 0);
+  let doneBytes = 0, doneCount = 0, failed = 0;
+  const box = $('preload'), MB = b => (b / 1048576).toFixed(1);
+  box.classList.add('show');
+  const paint = () => {
+    const pct = Math.floor(doneBytes / total * 100);
+    $('pl-pct').textContent = pct + '%';
+    $('pl-fill').style.width = pct + '%';
+    $('pl-sub').textContent = `${MB(doneBytes)} / ${MB(total)} MB · 第一次開啟需下載，之後會直接從本機讀取`;
+  };
+  paint();
+  let saveTimer = null;
+  const saveHashes = () => cache.put(HKEY, new Response(JSON.stringify(old), { headers: { 'Content-Type': 'application/json' } })).catch(() => {});
+  let i = 0;
+  const worker = async () => {
+    while (i < todo.length) {
+      const [p, f] = todo[i++];
+      try {
+        const res = await fetch('./' + p.split('/').map(encodeURIComponent).join('/') + '?__pre=' + f.h, { cache: 'no-cache' });
+        if (!res.ok) throw 0;
+        await cache.put(keyOf('./' + p), res);
+        old[p] = f.h;
+        if (!saveTimer) saveTimer = setTimeout(() => { saveTimer = null; saveHashes(); }, 1500);
+      } catch (e) { failed++; }
+      doneBytes += f.s; doneCount++; paint();
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  clearTimeout(saveTimer); await saveHashes();
+  box.classList.add('done');
+  $('pl-title').textContent = failed ? `素材載入完成（${failed} 個失敗）` : '✓ 素材已全部載入';
+  $('pl-pct').textContent = '100%'; $('pl-fill').style.width = '100%';
+  $('pl-sub').textContent = '之後開啟會直接從本機讀取';
+  setTimeout(() => box.classList.add('fade'), 4000);
+  setTimeout(() => box.classList.remove('show', 'fade'), 4800);
+}
+
+/* ============================================================
    啟動
    ============================================================ */
 buildStrips(); buildProgress(); setVoiceVolume(voiceVolume); render();
+preloadAssets();
 </script>
 </body>
 </html>
