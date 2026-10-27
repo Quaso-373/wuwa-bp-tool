@@ -23,7 +23,11 @@
   input, [contenteditable="true"] { user-select: text; }
 
   /* ======================= 網路大廳 ======================= */
-  .net-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; justify-content: center; align-items: center; background-image: url('lobby-bg.jpg'); background-size: cover; background-position: center; padding: 20px; overflow-y: auto; }
+  .net-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; justify-content: center; align-items: center; background-image: url('lobby-bg.jpg'); background-size: cover; background-position: center; padding: 20px; overflow-y: auto; scrollbar-gutter: stable both-edges; scrollbar-width: thin; scrollbar-color: rgba(251,191,36,0.35) transparent; }
+  /* 兩側預留捲軸空間：展開設定出現捲軸時，大廳卡片不會往左偏 */
+  .net-overlay::-webkit-scrollbar { width: 8px; }
+  .net-overlay::-webkit-scrollbar-thumb { background: rgba(251,191,36,0.35); border-radius: 4px; }
+  .net-overlay::-webkit-scrollbar-track { background: transparent; }
   .net-overlay::before { content: ''; position: absolute; inset: 0; z-index: -1;
     background: radial-gradient(70% 90% at 8% 55%, rgba(37,99,235,0.22) 0%, transparent 45%), radial-gradient(70% 90% at 92% 55%, rgba(220,38,38,0.22) 0%, transparent 45%), radial-gradient(circle at 50% 30%, rgba(10,12,20,0.5) 0%, rgba(3,3,8,0.9) 78%); }
   .net-box { position: relative; z-index: 1; width: 640px; max-width: 100%; margin: auto; background: linear-gradient(165deg, rgba(22,23,32,0.92) 0%, rgba(12,12,18,0.94) 100%); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 34px 34px 26px; box-shadow: 0 30px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06); animation: net-rise 0.5s cubic-bezier(0.16,1,0.3,1); }
