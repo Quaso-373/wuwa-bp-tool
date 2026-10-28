@@ -1139,11 +1139,23 @@ function getRoleDisplayName(role) {
 /* ============================================================
    圖片
    ============================================================ */
+/* 載入圖片：網路一時失敗會自動重試（同一張先重試、再換副檔名，整串再重來兩輪），不會因為一次失敗就放棄 */
 function setImgWithFallback(img, list) {
-  const tries = (list || []).slice();
+  const urls = (list || []).slice(); if (!urls.length) return;
+  const token = img._imgTok = (img._imgTok || 0) + 1;
+  let i = 0, retried = false, cycle = 0;
+  const bust = u => u + (u.includes('?') ? '&' : '?') + 'r=' + (Date.now() % 1e6);
   img.classList.remove('broken');
-  img.onerror = () => { if (tries.length) img.src = tries.shift(); else { img.onerror = null; img.classList.add('broken'); } };
-  if (tries.length) img.src = tries.shift();
+  if (!img._loadL) { img._loadL = true; img.addEventListener('load', () => img.classList.remove('broken')); }
+  img.onerror = () => {
+    if (img._imgTok !== token) return;
+    if (!retried) { retried = true; setTimeout(() => { if (img._imgTok === token) img.src = bust(urls[i]); }, 400 + cycle * 800); return; }
+    retried = false; i++;
+    if (i < urls.length) { img.src = urls[i]; return; }
+    if (cycle < 2) { cycle++; i = 0; setTimeout(() => { if (img._imgTok === token) img.src = bust(urls[0]); }, 1500 * cycle); return; }
+    img.onerror = null; img.classList.add('broken');
+  };
+  img.src = urls[0];
 }
 function elIconFallback(img) {
   const el = img.dataset.el;
@@ -1815,8 +1827,9 @@ function render() {
     el.classList.toggle('active', !!s && s.id === el.id && state.started);
     el.classList.remove('target');
     const key = c ? c.id : '';
-    if (el.dataset.cid !== key) {
-      el.dataset.cid = key;
+    const stale = c && img.classList.contains('broken') && Date.now() - (img._retryAt || 0) > 4000;   // 之前載入失敗：重新整理時再試
+    if (el.dataset.cid !== key || stale) {
+      el.dataset.cid = key; img._retryAt = Date.now();
       if (c) setImgWithFallback(img, isBan ? c.imgList : c.portraitList); else img.removeAttribute('src');
     }
     if (!isBan) el.querySelector('.nm').textContent = c ? c.name : (s && s.id === el.id && state.started ? '選擇中' : '');
@@ -2611,7 +2624,7 @@ async function preloadAssets() {
     pre.essTotal = ess.reduce((n, [, f]) => n + f.s, 0);
     let saveTimer = null;
     const saveHashes = () => cache.put(HKEY, new Response(JSON.stringify(old), { headers: { 'Content-Type': 'application/json' } })).catch(() => {});
-    const run = async (list, onEach) => {
+    const run = async (list, onEach, nWorkers) => {
       let i = 0, failed = 0;
       const worker = async () => {
         while (i < list.length) {
@@ -2626,7 +2639,7 @@ async function preloadAssets() {
           onEach(f.s);
         }
       };
-      await Promise.all([worker(), worker(), worker(), worker(), worker(), worker()]);
+      await Promise.all(Array.from({ length: nWorkers || 6 }, worker));
       return failed;
     };
     if (ess.length) await run(ess, b => { pre.essDone += b; paintGate(); });
@@ -2636,7 +2649,7 @@ async function preloadAssets() {
       const total = spine.reduce((n, [, f]) => n + f.s, 0); let done = 0;
       const paint = () => { const pct = Math.floor(done / total * 100); $('pl-pct').textContent = pct + '%'; $('pl-fill').style.width = pct + '%'; $('pl-sub').textContent = `${MB(done)} / ${MB(total)} MB · 下載完成前先顯示靜態立繪`; };
       box.classList.add('show'); paint();
-      const failed = await run(spine, b => { done += b; paint(); });
+      const failed = await run(spine, b => { done += b; paint(); }, 2);   // 背景下載動態立繪只開 2 條，不搶畫面上圖片的頻寬
       box.classList.add('done');
       $('pl-title').textContent = failed ? `動態立繪下載完成（${failed} 個失敗）` : '✓ 動態立繪已全部載入';
       $('pl-pct').textContent = '100%'; $('pl-fill').style.width = '100%'; $('pl-sub').textContent = '之後開啟會直接從本機讀取';

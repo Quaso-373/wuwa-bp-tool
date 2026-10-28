@@ -23,7 +23,9 @@ self.addEventListener('fetch', e => {
     const key = url.origin + url.pathname;
     const hit = await cache.match(key);
     if (hit) return hit;
-    const res = await fetch(req);
+    let res;
+    try { res = await fetch(req); }
+    catch (e) { await new Promise(r => setTimeout(r, 400)); res = await fetch(url.href, { cache: 'no-store' }); }   // 網路一時失敗：重試一次
     if (res.ok && res.type === 'basic') cache.put(key, res.clone()).catch(() => {});
     return res;
   })());
