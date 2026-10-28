@@ -140,6 +140,11 @@
   .rules-close { cursor: pointer; color: #888; font-size: 18px; padding: 4px 8px; border-radius: 6px; background: none; border: none; }
   .rules-close:hover { color: #fff; background: rgba(255,255,255,0.08); }
   .rules-body { padding: 8px 22px 4px; overflow-y: auto; }
+  .rules-tabs { display: flex; gap: 6px; padding: 12px 22px 0; border-bottom: 1px solid #2a2a34; }
+  .rules-tab { height: 38px; padding: 0 18px; border: none; border-bottom: 2px solid transparent; background: transparent; color: #8a8a96; font-size: 14px; font-weight: 800; letter-spacing: 2px; cursor: pointer; margin-bottom: -1px; }
+  .rules-tab:hover { color: #e8e8ee; }
+  .rules-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+  .rules-page { display: none; } .rules-page.active { display: block; }
   .rules-sec { padding: 16px 0; border-bottom: 1px solid #22222c; }
   .rules-sec:last-child { border-bottom: none; }
   .rules-sec h4 { margin: 0 0 10px; font-size: 15px; color: var(--gold); }
@@ -446,6 +451,8 @@
   .strip.red .mrow { flex-direction: row-reverse; }
   .mrow .rl { width: 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; writing-mode: vertical-rl; font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; color: var(--muted); }
   .strip.mx .slot .no { font-size: 13px; top: 4px; }
+  .strip.mx .slot-inner { left: -10%; width: 120%; }   /* 矩陣格子較矮：縮小放大倍率、對齊頭頂，整顆頭都看得到 */
+  .strip.mx .slot img { object-position: center 4%; }
   .strip.mx .slot .nm { bottom: 6px; font-size: clamp(11px, 0.8vw, 15px); }
   .strip.mx .slot.active { flex: 1.6; }
   .ban.mx .ban-box { width: 4.6vh; height: 4.6vh; min-width: 40px; min-height: 40px; }
@@ -608,39 +615,78 @@
 <div id="rules-modal" class="rules-modal" onclick="if(event.target===this)closeRules()">
   <div class="rules-card zh">
     <div class="rules-head"><h3>📖 賽制規則說明</h3><button class="rules-close" type="button" onclick="closeRules()" aria-label="關閉">✕</button></div>
+    <div class="rules-tabs" role="tablist">
+      <button type="button" class="rules-tab" role="tab" data-page="standard" onclick="showRulesPage('standard')">標準（破壞）</button>
+      <button type="button" class="rules-tab" role="tab" data-page="matrix" onclick="showRulesPage('matrix')">矩陣</button>
+    </div>
     <div class="rules-body">
+      <div class="rules-page" data-page="standard">
       <section class="rules-sec">
-        <h4>🧩 兩種賽制</h4>
+        <h4>🔄 BP 流程</h4>
+        <ol>
+          <li><b>準備</b>：雙方按下「準備」後倒數 3 秒開始，藍隊先手。</li>
+          <li><b>禁用</b>：藍、紅各禁用 1 名角色，該角色本局雙方都不能選。</li>
+          <li><b>選角</b>：依「藍 → 紅 → 紅 → 藍」的蛇形順序輪流選角，雙方各選 7 名。</li>
+          <li><b>破壞</b>：選角結束後，雙方各有 1 次機會破壞對手的一名角色。</li>
+        </ol>
+      </section>
+      <section class="rules-sec">
+        <h4>🛡️ 保護位與破壞</h4>
         <ul>
-          <li><b>標準（破壞）</b>：各禁 1、蛇形各選 7，最後雙方各破壞對手 1 名（保護位除外）。</li>
-          <li><b>矩陣</b>：賽前系統抽籤，中籤者從「先手 BP／後手 BP／先出戰／後出戰」選一項，對手決定另一組。18 步雙邊全局禁選，各禁 3、各選 10；第二輪先後交換，由第一輪後手方先禁、先選。一次選 2 名時每名各自計時。BP 結束後雙方從 10 名中挑 9 名組成三隊，雙方確認後同時公開，再由裁判登記分數（總分高者勝）。</li>
-          <li><b>BO3 / BO5</b>：第二局起不再抽籤，由上一局失利方優先選擇。</li>
+          <li><b>保護位</b>：每隊的<b>第 3 格</b>是保護位（金框標示），這格的角色<b>不能被破壞</b>。</li>
+          <li><b>破壞</b>：點對手非保護位的角色，<b>再點一次</b>才會送出；被破壞的角色蓋上 BAN 印章，視為不能上場。</li>
+          <li>送出後無法反悔，除非裁判使用「上一步」。</li>
         </ul>
       </section>
       <section class="rules-sec">
-        <h4>🔄 標準賽制 BP 流程</h4>
-        <ol>
-          <li><b>禁用階段</b>：藍、紅雙方各禁用 1 名角色（該角色本場雙方皆不可選用）。</li>
-          <li><b>選角階段</b>：依「藍→紅→紅→藍」的蛇形順序輪流選角，雙方各選 7 名。</li>
-          <li><b>破壞階段</b>：選角結束後，雙方各有 1 次「破壞」機會，可指定破壞對手的一名角色（保護位除外）。</li>
-        </ol>
-        <p class="rules-note">※ 房主（裁判）可在「進階賽制設定」切換賽制與場次。超時：禁用視為空 Ban，選角從可選角色中隨機補上（可在設定中改為暫停）。</p>
-      </section>
-      <section class="rules-sec">
-        <h4>🛡️ 保護位 / 破壞位規則</h4>
+        <h4>🏁 場次與結果</h4>
         <ul>
-          <li><b>保護位</b>：每隊的<b>第 3 個選角格</b>為保護位（金框標示），此位置的角色<b>不可被對手破壞</b>。</li>
-          <li><b>破壞位</b>：破壞階段時，點擊對手<b>非保護位</b>的已選角色即可破壞，被破壞的角色會蓋上 BAN 印章，視為無法上場。</li>
-          <li>破壞為一次性操作，送出後無法反悔（除非裁判使用「上一步」）。</li>
+          <li>可選單場、BO3、BO5。每局 BP 結束後由裁判登記勝方，下一局重新 BP。</li>
+          <li><b>超時</b>：禁用超時視為空 Ban；選角超時從可選角色中隨機補上（可在設定改為暫停等待裁判）。</li>
         </ul>
       </section>
       <section class="rules-sec">
         <h4>🏷️ 隊伍名稱</h4>
         <ul>
-          <li>選手可在加入房間時填寫，或進房後點擊自己的隊名修改。</li>
-          <li>第一個禁用送出後隊名即鎖定，重置進入下一局時解鎖；裁判可隨時修改。</li>
+          <li>選手可在加入房間時填寫，或進房後點自己的隊名修改；第一個禁用送出後鎖定，裁判可隨時修改。</li>
         </ul>
       </section>
+      </div>
+
+      <div class="rules-page" data-page="matrix">
+      <section class="rules-sec">
+        <h4>🎲 抽籤與優先權</h4>
+        <ul>
+          <li>雙方準備後系統抽籤。<b>中籤者</b>從「<b>先手 BP、後手 BP、先出戰、後出戰</b>」四項選一項，<b>對手</b>再決定另一組的順序。</li>
+          <li>例：中籤者選「後出戰」，對手就是先出戰，並從先手 BP、後手 BP 中選一個。</li>
+          <li><b>BO3 / BO5</b>：第二局起不再抽籤，由<b>上一局失利方</b>優先選擇。</li>
+        </ul>
+      </section>
+      <section class="rules-sec">
+        <h4>🔄 18 步雙邊全局禁選（各禁 3、各選 10）</h4>
+        <ul>
+          <li><b>第一輪（1–10 步）</b>：先手禁 → 後手禁 → 先手禁 → 後手禁 → 先手選 1 → 後手選 2 → 先手選 2 → 後手選 2 → 先手選 2 → 後手選 1。</li>
+          <li><b>第二輪（11–18 步）</b>：先後交換，由第一輪後手方先禁、先選：後手禁 → 先手禁 → 後手選 1 → 先手選 2 → 後手選 2 → 先手選 2 → 後手選 2 → 先手選 1。</li>
+          <li><b>全局禁選</b>：任何一方已禁用或選走的角色，本局雙方都不能再選。</li>
+          <li><b>一次選 2 名</b>：每確認 1 名就鎖定，計時重新開始，每名角色各有完整的思考時間。</li>
+          <li><b>超時</b>：禁用超時視為空 Ban；選角超時從可選角色中隨機補上，已鎖定的保留。</li>
+        </ul>
+      </section>
+      <section class="rules-sec">
+        <h4>🧩 配隊</h4>
+        <ul>
+          <li>BP 結束後，雙方各自從選到的 10 名中挑 9 名組成<b>三支隊伍</b>，剩下 1 名本局不上場。</li>
+          <li>確認後無法修改；<b>雙方都確認後才同時公開</b>陣容。</li>
+        </ul>
+      </section>
+      <section class="rules-sec">
+        <h4>🏁 計分與場次</h4>
+        <ul>
+          <li>裁判登記雙方三隊的分數，<b>總分高者勝</b>；平手或特殊情況由裁判直接判定。</li>
+          <li>可選單場、BO3、BO5；每局清空禁選紀錄，上一局用過的角色下一局可以再選。</li>
+        </ul>
+      </section>
+      </div>
     </div>
     <div class="rules-foot"><button type="button" class="rules-ok" onclick="closeRules()">我知道了</button></div>
   </div>
@@ -1351,7 +1397,12 @@ function requireNickname() {
   if (!name) { toast('請先輸入暱稱', 'warn'); el.classList.add('input-error'); el.focus(); setTimeout(() => el.classList.remove('input-error'), 1500); return null; }
   return name;
 }
-function openRules() { $('rules-modal').classList.add('show'); }
+function openRules() { showRulesPage(inRoom ? state.format : ($('cfg-format').value === 'matrix' ? 'matrix' : 'standard')); $('rules-modal').classList.add('show'); }
+function showRulesPage(pg) {
+  document.querySelectorAll('.rules-tab').forEach(t => { const on = t.dataset.page === pg; t.classList.toggle('active', on); t.setAttribute('aria-selected', on); });
+  document.querySelectorAll('.rules-page').forEach(x => x.classList.toggle('active', x.dataset.page === pg));
+  document.querySelector('.rules-body').scrollTop = 0;
+}
 function closeRules() { $('rules-modal').classList.remove('show'); }
 function toggleFormat() { $('format-section').classList.toggle('collapsed'); }
 function syncLobbyFormat() { $('cfg-post-wrap').style.display = $('cfg-format').value === 'matrix' ? '' : 'none'; }
