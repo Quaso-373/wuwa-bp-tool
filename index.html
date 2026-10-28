@@ -708,7 +708,7 @@
       </button>
       <div class="format-body">
         <div class="format-row">
-          <div class="mini"><span>賽事名稱</span><input type="text" id="cfg-event" class="lobby-input" placeholder="例：玄方杯 S1" maxlength="20"></div>
+          <div class="mini"><span>賽事名稱</span><input type="text" id="cfg-event" class="lobby-input" placeholder="例：超級可杯 S1" maxlength="20"></div>
           <div class="mini"><span>主辦人</span><input type="text" id="cfg-organizer" class="lobby-input" placeholder="主辦人名稱" maxlength="20"></div>
         </div>
         <div class="format-row">
@@ -2337,7 +2337,7 @@ async function copyResult() {
 /* ============================================================
    矩陣模式：抽籤與優先權畫面
    ============================================================ */
-let drawTimer = null, prioSig = '';
+let drawTimer = null, prioSig = '', wasDrawing = false;
 function teamIcon(t) { return t === 'red' ? 'nunu.png' : 'phoebe.png'; }
 function stopDrawAnim() { clearInterval(drawTimer); drawTimer = null; prioSig = ''; }
 function paintPrio() {
@@ -2348,6 +2348,8 @@ function paintPrio() {
   const sig = [p.phase, p.chooser, p.pick1, drawing, canAct, state.blueName, state.redName, state.series.game].join('|');
   if (sig === prioSig) return;
   prioSig = sig;
+  if (wasDrawing && !drawing) playTeamCue(p.chooser);   // 抽中：播放中籤隊伍的提示語音
+  wasDrawing = drawing;
   const name = t => esc(state[t + 'Name']);
   const medal = t => `<div class="pr-medal ${t === 'blue' ? 'b' : 'r'}${!drawing && t === p.chooser ? ' lit win' : ''}" id="pm-${t}">
       <div class="ring"><img src="${teamIcon(t)}" alt="" onerror="this.remove()"></div><span class="nm">${name(t)}</span>
