@@ -31,7 +31,7 @@
   .net-overlay::-webkit-scrollbar { width: 8px; }
   .net-overlay::-webkit-scrollbar-thumb { background: rgba(251,191,36,0.35); border-radius: 4px; }
   .net-overlay::-webkit-scrollbar-track { background: transparent; }
-  .net-overlay::before { content: ''; position: absolute; inset: 0; z-index: -1;
+  .net-overlay::before { content: ''; position: fixed; inset: 0; z-index: -1;   /* fixed：往下捲時暗色遮罩也蓋滿整個畫面 */
     background: radial-gradient(70% 90% at 8% 55%, rgba(37,99,235,0.22) 0%, transparent 45%), radial-gradient(70% 90% at 92% 55%, rgba(220,38,38,0.22) 0%, transparent 45%), radial-gradient(circle at 50% 30%, rgba(10,12,20,0.5) 0%, rgba(3,3,8,0.9) 78%); }
   .net-box { position: relative; z-index: 1; width: 640px; max-width: 100%; margin: auto; background: linear-gradient(165deg, rgba(22,23,32,0.92) 0%, rgba(12,12,18,0.94) 100%); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 34px 34px 26px; box-shadow: 0 30px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06); animation: net-rise 0.5s cubic-bezier(0.16,1,0.3,1); }
   .net-box::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); box-shadow: 0 0 12px rgba(251,191,36,0.6); }
@@ -460,7 +460,7 @@
   .strip.mx .slot-inner { left: -10%; width: 120%; }   /* 矩陣格子較矮：縮小放大倍率、對齊頭頂，整顆頭都看得到 */
   .strip.mx .slot img { object-position: center 4%; }
   .strip.mx .slot .nm { bottom: 6px; font-size: clamp(11px, 0.8vw, 15px); }
-  .strip.mx .slot.active { flex: 1.6; }
+  .strip.mx .slot.active { flex: 1; }   /* 矩陣格子不放大：選擇中的預覽和其他格裁切一致、置中 */
   .ban.mx .ban-box { width: 4.6vh; height: 4.6vh; min-width: 40px; min-height: 40px; }
   .ttag { height: 22px; padding: 0 9px; border-radius: 11px; display: inline-flex; align-items: center; flex-shrink: 0; border: 1px solid #555; color: var(--sub); font-family: 'Noto Sans TC', sans-serif; font-size: 11px; font-weight: 900; letter-spacing: 1px; white-space: nowrap; }
   .ttag.first { background: var(--gold); border-color: var(--gold); color: #1a1205; }
