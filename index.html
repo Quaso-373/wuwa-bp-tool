@@ -1526,6 +1526,7 @@ function enterRoom() {
   $('btn-ref').style.display = myRole === 'referee' ? '' : 'none';
   $('rm-close').style.display = offlineMode ? 'none' : '';
   buildBoard(); render();
+  startHeartbeat();
 }
 
 /* 連線設定：多組 STUN 幫助穿越家用路由器；若要支援擋點對點的網路（公司、學校、部分手機網路），在 TURN_SERVERS 填入 TURN 伺服器 */
@@ -1622,10 +1623,38 @@ function startOffline() {
 
 async function backToLobby() {
   const connected = !offlineMode && (isHost || (hostConn && hostConn.open));
-  const ok = await uiConfirm('返回大廳', connected ? '返回大廳會中斷目前的房間連線，確定要離開嗎？' : '確定要返回大廳嗎？', '返回大廳', connected);
+  const msg = !connected ? '確定要返回大廳嗎？' : isHost ? '你是房主，返回大廳會關閉房間，所有人都會被送回大廳。確定嗎？' : '返回大廳會中斷目前的房間連線，確定要離開嗎？';
+  const ok = await uiConfirm('返回大廳', msg, '返回大廳', connected);
   if (ok) forceReturnToLobby();
 }
+function notifyRoomClosed() {   // 房主離開：通知所有人房間已關閉
+  if (!isHost) return;
+  connections.forEach(x => { try { if (x.conn.open) x.conn.send({ type: 'room-closed', reason: '房主已關閉房間' }); } catch (e) {} });
+}
+// 房主直接關掉分頁或重新整理時，也盡量通知其他人
+window.addEventListener('pagehide', () => { if (inRoom) notifyRoomClosed(); });
+/* 心跳：雙方每 3 秒互報一次；超過 25 秒沒收到對方任何訊息，就當作斷線（關分頁、斷網時連線不一定會自動結束） */
+const HB_MS = 3000, HB_DEAD = 25000;
+let hbTimer = null, lastHostMsg = 0;
+function startHeartbeat() {
+  clearInterval(hbTimer); lastHostMsg = Date.now();
+  if (offlineMode) return;
+  hbTimer = setInterval(() => {
+    const now = Date.now();
+    if (isHost) {
+      connections.slice().forEach(x => {
+        if (now - (x.lastSeen || now) > HB_DEAD) { try { x.conn.close(); } catch (e) {} onGuestLeave(x.conn); return; }
+        try { if (x.conn.open) x.conn.send({ type: 'hb' }); } catch (e) {}
+      });
+    } else if (hostConn) {
+      try { if (hostConn.open) hostConn.send({ type: 'hb' }); } catch (e) {}
+      if (now - lastHostMsg > HB_DEAD) forceReturnToLobby('與房主失去連線（房主可能已關閉網頁或斷線）');
+    }
+  }, HB_MS);
+}
 function forceReturnToLobby(msg) {
+  clearInterval(hbTimer); hbTimer = null;
+  notifyRoomClosed();
   joining = false; clearTimeout(joinTimer); setJoinStatus('');
   try { if (hostConn) hostConn.close(); } catch (e) {}
   connections.forEach(x => { try { x.conn.close(); } catch (e) {} }); connections.length = 0;
@@ -1642,6 +1671,8 @@ function forceReturnToLobby(msg) {
    連線（房主為權威端）
    ============================================================ */
 function onHostReceive(conn, data) {
+  const seen = connections.find(x => x.conn === conn); if (seen) seen.lastSeen = Date.now();
+  if (data.type === 'hb') return;
   if (data.type === 'hello') {
     const role = ['blue', 'red', 'viewer'].includes(data.role) ? data.role : 'viewer';
     if (role === 'blue' || role === 'red') {
@@ -1656,7 +1687,7 @@ function onHostReceive(conn, data) {
         }
       }
     }
-    connections.push({ conn, role, nickname: data.nickname });
+    connections.push({ conn, role, nickname: data.nickname, lastSeen: Date.now() });
     if ((role === 'blue' || role === 'red') && data.teamName && state.history.length === 0) {
       state[role + 'Name'] = String(data.teamName).slice(0, 12);
     }
@@ -1708,6 +1739,8 @@ function onGuestLeave(conn) {
   render();
 }
 function onGuestReceive(data) {
+  lastHostMsg = Date.now();
+  if (data.type === 'hb') return;
   if (data.type === 'sync') { applySync(data); return; }
   if (data.type === 'chat') { executeChatMsg(data.role, data.roleName, data.text); return; }
   if (data.type === 'join-rejected') { forceReturnToLobby(data.reason || '無法加入房間'); return; }
