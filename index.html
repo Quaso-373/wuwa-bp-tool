@@ -7,8 +7,11 @@
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="preload" href="lobby-bg.jpg" as="image">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-<script src="https://unpkg.com/@esotericsoftware/spine-player@4.1.56/dist/iife/spine-player.js"></script>
+<!-- 連線與動態立繪元件：放在網站自己的 vendor 資料夾，不靠外部 CDN；萬一讀不到再改用 CDN -->
+<script src="vendor/peerjs.min.js"></script>
+<script>window.Peer || document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"><\/script>');</script>
+<script src="vendor/spine-player.js"></script>
+<script>window.spine || document.write('<script src="https://cdn.jsdelivr.net/npm/@esotericsoftware/spine-player@4.1.56/dist/iife/spine-player.js"><\/script>');</script>
 <style>
   :root {
     --bg: #050508; --border: #333; --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444;
@@ -1539,11 +1542,19 @@ function peerErrMsg(err) {
   if (t === 'webrtc') return '點對點連線失敗：請關閉 VPN 或換個網路（例如手機熱點）再試';
   return '連線錯誤' + (t ? `（${t}）` : '');
 }
+function peerReady() {
+  if (typeof Peer !== 'undefined') return true;
+  const m = '連線元件載入失敗：網路或外掛擋住了網站檔案，請按 Ctrl+F5 重新整理，或用無痕視窗再試';
+  setJoinStatus(m, true); toast(m, 'warn'); return false;
+}
+// 大廳裡發生未預期的錯誤時，顯示在加入按鈕下方，方便回報
+window.addEventListener('error', e => { if (!inRoom && joining) setJoinStatus('發生錯誤：' + (e.message || '未知錯誤') + '（請截圖回報）', true); });
 function setJoinStatus(msg, bad) { const el = $('join-status'); if (!el) return; el.textContent = msg || ''; el.classList.toggle('bad', !!bad); }
 let joinTimer = null, joining = false;
 function createRoom() {
   const nick = requireNickname(); if (!nick) return;
   myNickname = nick; myRole = 'referee'; offlineMode = false;
+  if (!peerReady()) return;
   resetLocalState();
   try { if (peer && !peer.destroyed) peer.destroy(); } catch (e) {}
   const roomId = 'BP' + Math.floor(1000 + Math.random() * 9000);
@@ -1575,6 +1586,7 @@ function joinRoom() {
   myTeamName = myRole === 'viewer' ? '' : $('my-teamname').value.trim().slice(0, 12);
   const raw = $('join-input').value.trim().replace(/\D/g, '');
   if (raw.length !== 4) { toast('請輸入正確的 4 碼數字', 'warn'); return; }
+  if (!peerReady()) return;
   if (joining) return;
   joining = true; clearTimeout(joinTimer);
   try { if (peer && !peer.destroyed) peer.destroy(); } catch (e) {}
