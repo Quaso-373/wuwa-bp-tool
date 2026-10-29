@@ -97,6 +97,9 @@
   .net-box select { appearance: none; -webkit-appearance: none; padding-right: 34px; cursor: pointer; }
   .select-wrap::after { content: '▾'; position: absolute; right: 13px; top: 50%; transform: translateY(-50%); color: #888; font-size: 12px; pointer-events: none; }
   .net-box select option { background: #16161e; color: #fff; }
+  .join-status { margin: 10px 0 0; min-height: 0; font-size: 12px; line-height: 1.6; color: #93c5fd; text-align: center; }
+  .join-status:empty { display: none; }
+  .join-status.bad { color: #fca5a5; }
   .offline-link { display: block; margin: 18px auto 4px; background: none; border: none; color: #777; font-size: 13px; cursor: pointer; letter-spacing: 1px; padding: 6px; }
   .offline-link:hover { color: var(--gold); }
   /* 進房讀取畫面 */
@@ -744,6 +747,7 @@
         <p>選手僅能在輪到自己隊伍的回合，親自選角或破壞。</p>
         <input type="text" id="join-input" class="lobby-input room-input" placeholder="0000" maxlength="4" inputmode="numeric">
         <button class="net-btn net-btn-join" type="button" onclick="joinRoom()">加入房間</button>
+        <p class="join-status" id="join-status" aria-live="polite"></p>
       </div>
     </div>
 
@@ -1521,12 +1525,30 @@ function enterRoom() {
   buildBoard(); render();
 }
 
+/* 連線設定：多組 STUN 幫助穿越家用路由器；若要支援擋點對點的網路（公司、學校、部分手機網路），在 TURN_SERVERS 填入 TURN 伺服器 */
+const TURN_SERVERS = [];   // 例：{ urls: 'turn:你的伺服器:3478', username: '帳號', credential: '密碼' }
+const PEER_OPTS = { config: { iceServers: [
+  { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' }, ...TURN_SERVERS ] } };
+function peerErrMsg(err) {
+  const t = err && err.type;
+  if (t === 'peer-unavailable') return '找不到這個房號：請確認 4 碼是否正確，或房主是否還開著房間';
+  if (t === 'browser-incompatible') return '這個瀏覽器不支援連線，請改用最新版 Chrome / Edge';
+  if (t === 'network' || t === 'socket-error' || t === 'socket-closed' || t === 'server-error')
+    return '連不上配對伺服器：可能被防火牆、VPN 或擋廣告外掛擋住，請換網路或用無痕視窗再試';
+  if (t === 'webrtc') return '點對點連線失敗：請關閉 VPN 或換個網路（例如手機熱點）再試';
+  return '連線錯誤' + (t ? `（${t}）` : '');
+}
+function setJoinStatus(msg, bad) { const el = $('join-status'); if (!el) return; el.textContent = msg || ''; el.classList.toggle('bad', !!bad); }
+let joinTimer = null, joining = false;
 function createRoom() {
   const nick = requireNickname(); if (!nick) return;
   myNickname = nick; myRole = 'referee'; offlineMode = false;
   resetLocalState();
+  try { if (peer && !peer.destroyed) peer.destroy(); } catch (e) {}
   const roomId = 'BP' + Math.floor(1000 + Math.random() * 9000);
-  peer = new Peer(roomId);
+  peer = new Peer(roomId, PEER_OPTS);
+  peer.on('disconnected', () => { if (peer && !peer.destroyed) setTimeout(() => { try { peer.reconnect(); } catch (e) {} }, 1000); });   // 與配對伺服器斷線：自動重連，新成員才找得到房間
   peer.on('open', (id) => {
     $('room-code-display').textContent = id.replace('BP', '');
     $('room-code-wrap').classList.add('show');
@@ -1537,7 +1559,10 @@ function createRoom() {
     }, 2200);
     beginTurnTimer();
   });
-  peer.on('error', (err) => toast('連線錯誤：' + (err.type || ''), 'warn'));
+  peer.on('error', (err) => {
+    if (err && err.type === 'unavailable-id' && !inRoom) { toast('房號重複，重新產生中…'); setTimeout(createRoom, 300); return; }
+    toast(peerErrMsg(err), 'warn');
+  });
   peer.on('connection', (conn) => {
     conn.on('data', (data) => onHostReceive(conn, data));
     conn.on('close', () => onGuestLeave(conn));
@@ -1550,19 +1575,29 @@ function joinRoom() {
   myTeamName = myRole === 'viewer' ? '' : $('my-teamname').value.trim().slice(0, 12);
   const raw = $('join-input').value.trim().replace(/\D/g, '');
   if (raw.length !== 4) { toast('請輸入正確的 4 碼數字', 'warn'); return; }
-  peer = new Peer();
+  if (joining) return;
+  joining = true; clearTimeout(joinTimer);
+  try { if (peer && !peer.destroyed) peer.destroy(); } catch (e) {}
+  const fail = (msg) => { joining = false; clearTimeout(joinTimer); setJoinStatus(msg, true); toast(msg, 'warn'); try { peer.destroy(); } catch (e) {} };
+  setJoinStatus('連線中 1/2：連上配對伺服器…');
+  joinTimer = setTimeout(() => fail('連不上配對伺服器（逾時）：請檢查網路、關閉 VPN 或擋廣告外掛後再試'), 12000);
+  peer = new Peer(PEER_OPTS);
   peer.on('open', () => {
-    hostConn = peer.connect('BP' + raw);
+    clearTimeout(joinTimer);
+    setJoinStatus('連線中 2/2：連上房主…');
+    joinTimer = setTimeout(() => fail('連不上房主（逾時）：房號存在但點對點連線被擋。請關閉 VPN、換網路（例如手機熱點）或用無痕視窗再試'), 15000);
+    hostConn = peer.connect('BP' + raw, { reliable: true });
     hostConn.on('open', () => {
+      joining = false; clearTimeout(joinTimer); setJoinStatus('');
       isHost = false; lastHistSig = null; lastPendingKey = null;
       hostConn.send({ type: 'hello', role: myRole, nickname: myNickname, teamName: myTeamName });
       enterRoom();
     });
     hostConn.on('data', onGuestReceive);
-    hostConn.on('close', () => forceReturnToLobby('房主已離開，房間已關閉'));
-    hostConn.on('error', () => toast('找不到該房間，請確認代碼', 'warn'));
+    hostConn.on('close', () => { if (inRoom) forceReturnToLobby('房主已離開，房間已關閉'); });
+    hostConn.on('error', (err) => { if (joining) fail(peerErrMsg(err)); else toast(peerErrMsg(err), 'warn'); });
   });
-  peer.on('error', () => toast('連線失敗，請確認代碼或網路', 'warn'));
+  peer.on('error', (err) => { if (joining) fail(peerErrMsg(err)); else toast(peerErrMsg(err), 'warn'); });
 }
 
 function startOffline() {
@@ -1579,6 +1614,7 @@ async function backToLobby() {
   if (ok) forceReturnToLobby();
 }
 function forceReturnToLobby(msg) {
+  joining = false; clearTimeout(joinTimer); setJoinStatus('');
   try { if (hostConn) hostConn.close(); } catch (e) {}
   connections.forEach(x => { try { x.conn.close(); } catch (e) {} }); connections.length = 0;
   try { if (peer && !peer.destroyed) peer.destroy(); } catch (e) {}
