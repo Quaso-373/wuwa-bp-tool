@@ -1530,7 +1530,15 @@ function enterRoom() {
 }
 
 /* 連線設定：多組 STUN 幫助穿越家用路由器；若要支援擋點對點的網路（公司、學校、部分手機網路），在 TURN_SERVERS 填入 TURN 伺服器 */
-const TURN_SERVERS = [];   // 例：{ urls: 'turn:你的伺服器:3478', username: '帳號', credential: '密碼' }
+// Metered 中繼伺服器（免費方案）：直接連線失敗時自動改走這裡
+const TURN_USER = '9579401461b8139d02bf1201', TURN_PASS = 'riDkmmJHhHDuz2zd';
+const TURN_SERVERS = [
+  { urls: 'stun:stun.relay.metered.ca:80' },
+  { urls: 'turn:global.relay.metered.ca:80', username: TURN_USER, credential: TURN_PASS },
+  { urls: 'turn:global.relay.metered.ca:80?transport=tcp', username: TURN_USER, credential: TURN_PASS },
+  { urls: 'turn:global.relay.metered.ca:443', username: TURN_USER, credential: TURN_PASS },
+  { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: TURN_USER, credential: TURN_PASS },
+];
 const PEER_OPTS = { config: { iceServers: [
   { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun.cloudflare.com:3478' }, ...TURN_SERVERS ] } };
