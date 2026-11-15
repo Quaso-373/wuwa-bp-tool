@@ -273,11 +273,13 @@
   @keyframes from-l { from { opacity: 0; transform: translateX(-60px); } }
   @keyframes from-r { from { opacity: 0; transform: translateX(60px); } }
   /* 勢力徽記：放在文字側，呼吸 */
-  .faction-wm { position: absolute; top: 52%; left: 80%; height: 70%; width: auto; max-width: 36%; object-fit: contain; transform: translate(-50%, -50%);
-    pointer-events: none; z-index: 1; --wm-op: 0.16; opacity: 0; animation: wm-breath 4.5s ease-in-out infinite; }
-  .stage.red-side .faction-wm { left: 20%; }
+  .faction-wm { position: absolute; top: 50%; left: 81%; height: 78%; width: auto; max-width: 42%; object-fit: contain; transform: translate(-50%, -50%);
+    pointer-events: none; z-index: 1; --wm-op: 0.32; opacity: 0; animation: wm-breath 5s ease-in-out infinite; }
+  .stage.red-side .faction-wm { left: 19%; }
   .faction-wm.hidden, .stage.is-waiting .faction-wm { display: none; }
-  @keyframes wm-breath { 0%, 100% { opacity: var(--wm-op); filter: brightness(2.4) grayscale(1); } 50% { opacity: calc(var(--wm-op) * 0.5); filter: brightness(2.4) grayscale(1); } }
+  @keyframes wm-breath {
+    0%, 100% { opacity: calc(var(--wm-op) * 0.75); filter: brightness(2) grayscale(1); }
+    50% { opacity: calc(var(--wm-op) * 1.25); filter: brightness(2.6) grayscale(1) drop-shadow(0 0 22px rgba(255,255,255,0.5)); } }
   .stage.anim-paused .faction-wm { animation-play-state: paused; }
   .info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 1.5vh; padding: 60px 3vw 0 0; z-index: 2; }
   .stage.red-side .info { align-items: flex-end; text-align: right; padding: 60px 0 0 3vw; }
@@ -444,7 +446,7 @@
   .app.mx .art { position: absolute; left: calc(var(--colw) + 40px); right: calc(var(--colw) + 40px); top: 50px; bottom: 0; width: auto; -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 92%); mask-image: linear-gradient(180deg, #000 58%, transparent 92%); }
   .app.mx .fx, .app.mx .stage.red-side .fx { left: 50%; top: 45%; height: 82%; }
   .app.mx .fx .mk.o { inset: -24%; }
-  .app.mx .faction-wm, .app.mx .stage.red-side .faction-wm { left: 66%; top: 28%; height: 24%; }
+  .app.mx .faction-wm, .app.mx .stage.red-side .faction-wm { left: 50%; top: 40%; height: 52%; max-width: 40%; --wm-op: 0.22; }
   .app.mx .info, .app.mx .stage.red-side .info { position: absolute; left: calc(var(--colw) + 40px); right: calc(var(--colw) + 40px); bottom: 0; padding: 60px 0 104px; align-items: center; text-align: center; gap: 8px; background: linear-gradient(transparent, color-mix(in srgb, var(--bg) 92%, transparent) 62%); }
   .app.mx .info-team, .app.mx .info-meta { flex-direction: row !important; justify-content: center; }
   .app.mx .info-name { font-size: clamp(40px, 4.6vw, 88px); margin-right: -0.14em; }
@@ -2261,7 +2263,7 @@ function paintStage(c, team, what, o) {
     `<h1 class="info-name">${esc(c.name)}</h1>` +
     `<div class="info-en">${esc(c.en)}</div>` +
     `<div class="wave deco"><i></i></div>` +
-    `<div class="info-meta"><img class="el-icon" src="./element/${c.el}.webp" alt="" data-el="${c.el}" onerror="elIconFallback(this)"><span>${EL[c.el][0]}</span><span class="${c.rarity === 5 ? 'stars5' : 'stars4'}">${'★'.repeat(c.rarity)}</span>${fk && fk !== 'unknown' && fk !== 'other' ? `<span class="fac">${esc(FACTIONS[fk].name)}</span>` : ''}</div>` +
+    `<div class="info-meta"><img class="el-icon" src="./element/${c.el}.webp" alt="" data-el="${c.el}" onerror="elIconFallback(this)"><span>${EL[c.el][0]}</span><span class="${c.rarity === 5 ? 'stars5' : 'stars4'}">${'★'.repeat(c.rarity)}</span></div>` +
     (o.stamp ? `<div class="info-stamp">${o.stamp}</div>` : '');
   if (!sameChar) {
     info.classList.remove('enter'); void info.offsetWidth; info.classList.add('enter');
