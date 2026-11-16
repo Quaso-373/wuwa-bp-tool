@@ -12,6 +12,7 @@
    6. 素材有增減時，重新產生 assets.json（預載清單）。
    ============================================================ */
 const baseChars = [
+  { id: 'lily', name: '莉莉', en: 'Lily', el: 'Spectro', rarity: 5 },
   { id: 'xin', name: '心', en: 'Hsin', el: 'Electro', rarity: 5 },
   { id: 'suoming', name: '鎖暝', en: 'Suoming', el: 'Electro', rarity: 5 },
   { id: 'emis', name: '愛彌斯', en: 'Aemis', el: 'Fusion', rarity: 5 },
@@ -76,6 +77,7 @@ const baseChars = [
 
 /* 角色 id → Spine 資料夾 / 檔名（./spine/<資料夾>/<檔名>.skel） */
 const SPINE_MAP = {
+  lily:['Portraits_Lili','Portraits_Lili'],
   xin:['Portraits_Xin','Portraits_Xin'], suoming:['Portraits_Suoming','Portraits_Suoming'],
   emis:['Portraits_Aimisi','Portraits_Aimisi'], luhess:['Portraits_Luhesi','Portraits_Luhesi'], lynae:['Portraits_Linnai','Portraits_Linnai'],
   mornye:['Portraits_Moning','Portraits_Moning'], chisa:['Portraits_Qianxiao','Portraits_Qianxiao'], buling:['Portraits_Buling','Portraits_Buling'],
@@ -102,16 +104,17 @@ const SPINE_MAP = {
 
 /* 勢力（依官網共鳴者分類）：faction/<代號>.png 優先，沒有就讀官網圖 */
 const FACTIONS = {
-  hl: { name: '瑝瓏', file: 'logo-hl-big-b7dfb835.png' },
-  hha: { name: '黑海岸', file: 'logo-hha-big-ead4fd8a.png' },
+  hl: { name: '瑝瓏', file: 'logo-hl-big1-d1a2da46.png' },
+  hha: { name: '黑海岸', file: 'logo-hha-big1-ac99937a.png' },
   linaxita: { name: '拉古那', file: 'logo-linaxita-big-86b895f6.png' },
   qq: { name: '七丘', file: 'logo-qq-big-2f711973.webp' },
   xjxy: { name: '星炬學院', file: 'logo-xjxy-big-ddbed192.webp' },
   lhsk: { name: '深空聯合', file: 'logo-lhsk-big-e149e131.webp' },
   lyr: { name: '羅伊族', file: 'logo-lyr-big-03ab933c.webp' },
   zy: { name: '灼櫻', file: 'logo-zy-big-12373a0d.webp' },
+  xlb: { name: '新聯邦', file: 'logo-xlb-big-d9b1d6b1.webp' },
   cxh: { name: '殘星會', file: 'logo-cxh-big-4e7ed75e.webp' },
-  unknown: { name: '未知', file: 'logo-other-big-6aab58e2.png' },
+  unknown: { name: '未知', file: 'logo-other-big1-71aa044d.png' },
   other: { name: '其他', file: 'logo-unkonw-big-59c12fe7.png' },
 };
 const FACTION_MEMBERS = {
@@ -125,8 +128,9 @@ const FACTION_MEMBERS = {
   zy: ['feixue'],
   cxh: ['phrolova'],
   unknown: ['rebecca', 'lucy', 'rover_spectro_m', 'rover_havoc_f', 'rover_aero_m', 'rover_electro_f'],
-  other: ['danya', 'calcharo'],
+  xlb: ['lily', 'calcharo'],
+  other: ['danya'],
 };
 
 /* 選角清單置頂順序（新角色放前面） */
-const PINNED_ORDER = ['xin', 'suoming', 'jingran', 'qingxiao', 'suisui', 'xuanling', 'losera', 'rebecca', 'lucy', 'danya', 'feixue', 'sigrlinn'];
+const PINNED_ORDER = ['lily', 'xin', 'suoming', 'jingran', 'qingxiao', 'suisui', 'xuanling', 'losera', 'rebecca', 'lucy', 'danya', 'feixue', 'sigrlinn'];
