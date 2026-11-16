@@ -274,7 +274,7 @@
   @keyframes from-r { from { opacity: 0; transform: translateX(60px); } }
   /* 勢力徽記：放在文字側，呼吸 */
   .faction-wm { position: absolute; top: 48%; left: 80%; height: 96%; width: auto; max-width: 52%; object-fit: contain; transform: translate(-50%, -50%);
-    pointer-events: none; z-index: 1; --wm-op: 0.5; opacity: 0; animation: wm-breath 4.5s ease-in-out infinite; }
+    pointer-events: none; z-index: 1; --wm-op: 0.5; opacity: calc(var(--wm-op) * 0.8); filter: brightness(2.5) grayscale(1) drop-shadow(0 0 20px rgba(255,255,255,0.4)); animation: wm-breath 4.5s ease-in-out infinite; }
   .stage.red-side .faction-wm { left: 20%; }
   .faction-wm.hidden, .stage.is-waiting .faction-wm { display: none; }
   @keyframes wm-breath {
@@ -676,7 +676,8 @@
   img.broken { visibility: hidden; }
   /* 觀戰：隱藏所有操作 */
   body.role-viewer .tb-btn.chat, body.role-viewer .tb-btn.icon, body.role-viewer .tb-btn.ref { display: none; }
-  @media (prefers-reduced-motion: reduce) { .mk, .faction-wm, .chip.fill, .reopen { animation: none !important; } }
+  /* 系統開啟「減少動畫」時：旋轉與閃爍停止，勢力徽記保持呼吸（緩慢明暗，不算劇烈動畫） */
+  @media (prefers-reduced-motion: reduce) { .mk, .chip.fill, .reopen { animation: none !important; } }
 </style>
 </head>
 <body>
