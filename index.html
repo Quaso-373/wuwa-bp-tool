@@ -21,14 +21,16 @@
     --glass: rgba(13,17,26,0.82); --glass2: rgba(13,17,26,0.94); --line: rgba(255,255,255,0.1); --line2: rgba(255,255,255,0.22);
     --el: var(--teal); --status: var(--teal); --tp: 100%; --colw: clamp(300px, 23vw, 440px);
     --scan: repeating-linear-gradient(0deg, rgba(255,255,255,0.022) 0 1px, transparent 1px 4px);
-    --en: 'Chakra Petch', 'Noto Sans TC', sans-serif;
+    --cjk: 'Noto Sans TC', 'Noto Sans SC', sans-serif;
+    --en: 'Chakra Petch', var(--cjk);
   }
+  :root:lang(zh-CN) { --cjk: 'Noto Sans SC', 'Noto Sans TC', sans-serif; }
   * { box-sizing: border-box; }
   html, body { height: 100%; overflow: hidden; }
-  body { margin: 0; background: var(--bg0); color: var(--text); font-family: 'Noto Sans TC', sans-serif; overflow: hidden; user-select: none; }
+  body { margin: 0; background: var(--bg0); color: var(--text); font-family: var(--cjk); overflow: hidden; user-select: none; }
   button, input, select { font-family: inherit; }
   button { color: inherit; }
-  .zh { font-family: 'Noto Sans TC', sans-serif; }
+  .zh { font-family: var(--cjk); }
   .en { font-family: var(--en); letter-spacing: 0.14em; text-transform: uppercase; }
   input, [contenteditable="true"] { user-select: text; }
   :focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
@@ -46,6 +48,10 @@
   /* 聲痕：放射頻譜環 */
   .mk { position: absolute; inset: 0; background: var(--el); -webkit-mask: url(fx/mark.svg) center / contain no-repeat; mask: url(fx/mark.svg) center / contain no-repeat; animation: spin 70s linear infinite; pointer-events: none; }
   .pill { height: 38px; padding: 0 18px; border-radius: 19px; border: 1px solid var(--line2); background: rgba(255,255,255,0.06); color: var(--text); font-size: 13px; font-weight: 700; letter-spacing: 0.1em; cursor: pointer; transition: 0.18s; white-space: nowrap; }
+  .lang-sel { height: 38px; padding: 0 30px 0 16px; border-radius: 19px; border: 1px solid var(--line2); background: rgba(13,17,26,0.6) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239aa3b2'/%3E%3C/svg%3E") no-repeat right 13px center; color: var(--text); font-family: var(--cjk); font-size: 13px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer; appearance: none; -webkit-appearance: none; outline: none; flex-shrink: 0; }
+  .lang-sel:hover { border-color: rgba(255,255,255,0.5); }
+  .lang-sel option { background: #10141d; color: #fff; }
+  .lang-box { position: absolute; top: 20px; right: 24px; z-index: 2; }
   .pill:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.12); }
 
   /* ======================= 大廳 ======================= */
@@ -292,6 +298,8 @@
   .chip.prot { border-color: var(--gold); color: var(--gold); }
   .info-name { margin: 0; font-size: clamp(46px, 5.8vw, 112px); line-height: 1.1; font-weight: 900; letter-spacing: 0.14em; margin-right: -0.14em; color: #fff; text-shadow: 0 0 44px color-mix(in srgb, var(--el) 55%, transparent); }
   .stage.red-side .info-name { margin-right: 0; }
+  .info-name { white-space: nowrap; max-width: 100%; }
+  .nm-sub { font-size: 0.56em; letter-spacing: 0.1em; margin-left: 0.08em; }
   .info-en { font-family: var(--en); text-transform: uppercase; font-size: clamp(13px, 1.15vw, 22px); font-weight: 500; letter-spacing: 0.5em; color: var(--muted); }
   .info .wave { width: min(520px, 90%); }
   .info-meta { display: flex; align-items: center; gap: 16px; font-size: clamp(13px, 0.85vw, 16px); font-weight: 700; letter-spacing: 0.12em; }
@@ -342,7 +350,7 @@
   .countdown { position: absolute; inset: 0; z-index: 30; display: none; align-items: center; justify-content: center; background: rgba(5,7,12,0.6); pointer-events: none; }
   .countdown.show { display: flex; }
   .countdown span { font-family: var(--en); font-size: 24vh; font-weight: 700; color: var(--text); text-shadow: 0 0 60px rgba(127,227,214,0.9); animation: cd-pop 0.9s cubic-bezier(0.16,1,0.3,1); }
-  .countdown span.go { font-family: 'Noto Sans TC', sans-serif; font-size: 11vh; font-weight: 900; letter-spacing: 0.2em; }
+  .countdown span.go { font-family: var(--cjk); font-size: 11vh; font-weight: 900; letter-spacing: 0.2em; }
   @keyframes cd-pop { 0% { transform: scale(1.8); opacity: 0; } 30% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.92); opacity: 0.85; } }
   .paused-flag { position: absolute; left: 50%; top: 124px; transform: translateX(-50%); z-index: 25; display: none; height: 44px; padding: 0 24px; border-radius: 22px; align-items: center; gap: 10px; background: var(--gold); color: #1c1503; font-size: 15px; font-weight: 900; letter-spacing: 0.2em; box-shadow: 0 0 30px color-mix(in srgb, var(--gold) 50%, transparent); }
   .app.paused .paused-flag { display: flex; }
@@ -446,7 +454,7 @@
   .app.mx .art { position: absolute; left: calc(var(--colw) + 40px); right: calc(var(--colw) + 40px); top: 50px; bottom: 0; width: auto; -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 92%); mask-image: linear-gradient(180deg, #000 58%, transparent 92%); }
   .app.mx .fx, .app.mx .stage.red-side .fx { left: 50%; top: 45%; height: 82%; }
   .app.mx .fx .mk.o { inset: -24%; }
-  .app.mx .faction-wm, .app.mx .stage.red-side .faction-wm { left: 50%; top: 46%; height: 96%; max-width: 58%; z-index: 0; --wm-op: 0.6; }
+  .app.mx .faction-wm { display: none !important; }   /* 矩陣模式不顯示勢力徽記 */
   .app.mx .art { z-index: 1; }
   .app.mx .info, .app.mx .stage.red-side .info { position: absolute; left: calc(var(--colw) + 40px); right: calc(var(--colw) + 40px); bottom: 0; padding: 60px 0 104px; align-items: center; text-align: center; gap: 8px; background: linear-gradient(transparent, color-mix(in srgb, var(--bg) 92%, transparent) 62%); }
   .app.mx .info-team, .app.mx .info-meta { flex-direction: row !important; justify-content: center; }
@@ -799,6 +807,7 @@
 
 <!-- ======================= 大廳 ======================= -->
 <div id="net-overlay" class="net-overlay">
+  <div class="lang-box"><select class="lang-sel" data-noconv aria-label="語言 / 语言" onchange="setLang(this.value)"><option value="tw">繁體中文</option><option value="cn">简体中文</option></select></div>
   <div class="net-hero zh">
     <div class="net-eyebrow">WUTHERING WAVES · TOURNAMENT</div>
     <h2>鳴潮 BP<br>賽事系統</h2>
@@ -911,6 +920,7 @@
       <span class="tb-info" id="pg-room" onclick="copyInvite('')"></span>
       <span class="tb-info zh" id="pg-conn"></span>
       <span id="tb-info-sep" hidden></span>
+      <select class="lang-sel tb-lang" data-noconv aria-label="語言 / 语言" onchange="setLang(this.value)"><option value="tw">繁體中文</option><option value="cn">简体中文</option></select>
       <span class="tb-org zh"><span class="k">主辦人</span><span class="v" id="tb-org" data-meta="organizer" spellcheck="false">—</span></span>
       <div style="position: relative">
         <button class="tb-btn icon" id="btn-vol" type="button" aria-label="語音音量" onclick="toggleDrop('vol-pop', this)"></button>
@@ -1069,7 +1079,127 @@
 
 <!-- 角色資料（新增角色改這個檔案） -->
 <script src="data/characters.js"></script>
+<script src="data/t2s.js"></script>
 <script>
+/* ============================================================
+   繁體／簡體切換：每個人自己的顯示設定（存在瀏覽器裡，不同步給別人）
+   簡體模式下把畫面上的文字（含之後動態產生的）即時轉成簡體；
+   切回繁體時把轉過的文字還原。戰報圖片也會用簡體畫。
+   ============================================================ */
+const LANG_KEY = 'bp_lang';
+let LANG = 'tw';
+try { LANG = localStorage.getItem(LANG_KEY) === 'cn' ? 'cn' : 'tw'; } catch (e) {}
+const T2S = new Map();
+{ const t = [...T2S_T], s = [...T2S_S]; t.forEach((c, i) => T2S.set(c, s[i])); }
+const HAN_RE = /[㐀-鿿]/;
+function toS(s) {
+  if (!s || !HAN_RE.test(s)) return s;
+  for (const [a, b] of T2S_PHRASES) if (s.includes(a)) s = s.split(a).join(b);
+  let o = '';
+  for (const ch of s) o += T2S.get(ch) || ch;
+  return o;
+}
+const tr = s => (LANG === 'cn' ? toS(s) : s);
+const ORIG_TEXT = new WeakMap(), ORIG_ATTR = new WeakMap();
+const I18N_ATTRS = ['placeholder', 'title', 'aria-label'];
+function i18nSkip(el) {
+  if (!el || el.closest('[data-noconv],script,style')) return true;
+  const ed = el.closest('[contenteditable="true"]');
+  return !!ed && ed === document.activeElement;   // 正在編輯的文字不動，避免游標亂跳
+}
+function convNode(n) {
+  if (n.nodeType === 3) {
+    const cur = n.data; if (!HAN_RE.test(cur) || i18nSkip(n.parentElement)) return;
+    const s = toS(cur); if (s !== cur) { ORIG_TEXT.set(n, cur); n.data = s; }
+    return;
+  }
+  if (n.nodeType !== 1 || i18nSkip(n)) return;
+  for (const a of I18N_ATTRS) {
+    const v = n.getAttribute(a); if (!v || !HAN_RE.test(v)) continue;
+    const s = toS(v); if (s === v) continue;
+    let m = ORIG_ATTR.get(n); if (!m) ORIG_ATTR.set(n, m = {});
+    m[a] = v; n.setAttribute(a, s);
+  }
+  const w = document.createTreeWalker(n, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let x; while ((x = w.nextNode())) { if (x.nodeType === 3) convNode(x); else if (x !== n) convAttrs(x); }
+}
+function convAttrs(el) {
+  for (const a of I18N_ATTRS) {
+    const v = el.getAttribute(a); if (!v || !HAN_RE.test(v) || i18nSkip(el)) continue;
+    const s = toS(v); if (s === v) continue;
+    let m = ORIG_ATTR.get(el); if (!m) ORIG_ATTR.set(el, m = {});
+    m[a] = v; el.setAttribute(a, s);
+  }
+}
+function restoreAll() {
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let x;
+  while ((x = w.nextNode())) {
+    if (x.nodeType === 3) { const o = ORIG_TEXT.get(x); if (o !== undefined && x.data === toS(o)) x.data = o; ORIG_TEXT.delete(x); }
+    else { const m = ORIG_ATTR.get(x); if (m) { for (const a in m) if (x.getAttribute(a) === toS(m[a])) x.setAttribute(a, m[a]); ORIG_ATTR.delete(x); } }
+  }
+}
+const i18nObs = new MutationObserver(list => {
+  for (const r of list) {
+    if (r.type === 'characterData') convNode(r.target);
+    else if (r.type === 'attributes') convAttrs(r.target);
+    else r.addedNodes.forEach(convNode);
+  }
+});
+const TITLE_TW = document.title;
+let scFontLoaded = false;
+function applyLang() {
+  document.documentElement.lang = LANG === 'cn' ? 'zh-CN' : 'zh-TW';
+  document.title = tr(TITLE_TW);
+  document.querySelectorAll('.lang-sel').forEach(s => { s.value = LANG; });
+  if (LANG === 'cn') {
+    if (!scFontLoaded) {
+      scFontLoaded = true;
+      const l = document.createElement('link'); l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap';
+      document.head.appendChild(l);
+    }
+    convNode(document.body);
+    i18nObs.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: I18N_ATTRS });
+  } else {
+    i18nObs.disconnect();
+    restoreAll();
+  }
+  setTimeout(fitNames, 60);
+}
+function setLang(v) {
+  LANG = v === 'cn' ? 'cn' : 'tw';
+  try { localStorage.setItem(LANG_KEY, LANG); } catch (e) {}
+  applyLang();
+}
+// 戰報圖片：畫字時一併轉換
+(() => {
+  const P = CanvasRenderingContext2D.prototype;
+  for (const fn of ['fillText', 'strokeText', 'measureText']) {
+    const orig = P[fn];
+    P[fn] = function (t, ...rest) { return orig.call(this, typeof t === 'string' ? tr(t) : t, ...rest); };
+  }
+})();
+/* 角色名太長時自動縮小字級，維持一行 */
+function fitName(el) {
+  if (!el || !el.isConnected) return;
+  el.style.fontSize = '';
+  const par = el.parentElement; if (!par) return;
+  const cs = getComputedStyle(par);
+  let max = par.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  if (cs.display.includes('flex') && cs.flexDirection.startsWith('row'))   // 同一列還有其他東西（屬性、星數）：扣掉它們的寬度
+    for (const x of par.children) if (x !== el) max -= x.offsetWidth + 12;
+  if (!max) return;
+  let fs = parseFloat(getComputedStyle(el).fontSize), guard = 0;
+  while (el.scrollWidth > max && fs > 18 && guard++ < 40) { fs *= 0.92; el.style.fontSize = fs + 'px'; }
+}
+function fitNames() { document.querySelectorAll('.info-name, .sel-name').forEach(fitName); }
+window.addEventListener('resize', () => { clearTimeout(window.__fitN); window.__fitN = setTimeout(fitNames, 150); });
+function nameHtml(n) {   // 「漂泊者・湮滅」：後半段縮小
+  const m = n.length > 4 && n.match(/^(.+?)([・·])(.+)$/);
+  return m ? `${esc(m[1])}<span class="nm-sub">${esc(m[2] + m[3])}</span>` : esc(n);
+}
+
 /* 角色、動態立繪對應、勢力資料放在 data/characters.js */
 
 const EL = { Glacio: ['冷凝', '#7fd4ff'], Fusion: ['熱熔', '#ff8a5c'], Electro: ['導電', '#c38bff'], Aero: ['氣動', '#5fe0b0'], Spectro: ['衍射', '#f5e27a'], Havoc: ['湮滅', '#e0609a'] };
@@ -1355,16 +1485,33 @@ class ArtView {
       });
     } catch (e) { console.warn(e); }
   }
-  // 以站姿身高對齊，依 crop 只顯示上半部，左右置中
+  // 依角色本體對齊：以頭、手、身體等小零件定位（雨傘、大尾巴、長披風不算），依 crop 只顯示上半部，左右置中
   fit() {
     const p = this.player; if (!p || !p.skeleton || !this.anim) return;
     const w = this.host.clientWidth || 1, h = this.host.clientHeight || 1;
     const sk = p.skeleton; sk.setToSetupPose(); sk.updateWorldTransform();
     const o = new spine.Vector2(), s = new spine.Vector2(); sk.getBounds(o, s, []);
-    const top = o.y + s.y, visible = s.y * this.crop, padTop = s.y * 0.03;
+    const boxes = [];
+    for (const slot of sk.drawOrder) {
+      const a = slot.getAttachment(); if (!a || !a.computeWorldVertices) continue;
+      let v, n;
+      if (a instanceof spine.RegionAttachment) { n = 8; v = new Float32Array(8); a.computeWorldVertices(slot, v, 0, 2); }
+      else { n = a.worldVerticesLength; v = new Float32Array(n); a.computeWorldVertices(slot, 0, n, v, 0, 2); }
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      for (let i = 0; i < n; i += 2) { x0 = Math.min(x0, v[i]); x1 = Math.max(x1, v[i]); y0 = Math.min(y0, v[i + 1]); y1 = Math.max(y1, v[i + 1]); }
+      boxes.push({ x0, x1, y0, y1, w: x1 - x0, h: y1 - y0 });
+    }
+    // 只看「小零件」（頭、手、身體細節），排除雨傘、大尾巴、長披風等大型飾品
+    const small = boxes.filter(b => b.w < s.x * 0.3 && b.h < s.y * 0.3);
+    const ref = small.length > 8 ? small : boxes;
+    const xs = ref.map(b => (b.x0 + b.x1) / 2).sort((a, b) => a - b);
+    const cx = xs[Math.floor(xs.length / 2)];
+    const tops = ref.map(b => b.y1).sort((a, b) => b - a);
+    const top = tops[Math.min(tops.length - 1, Math.floor(tops.length * 0.02))];
+    const bottom = o.y, full = top - bottom;
+    const visible = full * this.crop, padTop = full * 0.04;
     const H = visible + padTop, W = H * (w / h);
-    p.config.viewport = { x: o.x + s.x / 2 - W / 2, y: top + padTop - H, width: W, height: H,
-      padLeft: 0, padRight: 0, padTop: 0, padBottom: 0, transitionTime: 0, animations: {} };
+    p.config.viewport = { x: cx - W / 2, y: top + padTop - H, width: W, height: H, padLeft: 0, padRight: 0, padTop: 0, padBottom: 0, transitionTime: 0, animations: {} };
     p.setAnimation(this.anim, true);
   }
 }
@@ -2262,11 +2409,12 @@ function paintStage(c, team, what, o) {
   info.innerHTML =
     `<div class="info-team"><img src="${isRed ? 'nunu.png' : 'phoebe.png'}" alt="" onerror="this.remove()"><span class="tm">${teamZh(team)}</span><span>${what}</span>` +
       (o.pending ? '<span class="chip fill">選擇中</span>' : '') + (o.prot ? '<span class="chip prot">保護位</span>' : '') + `</div>` +
-    `<h1 class="info-name">${esc(c.name)}</h1>` +
+    `<h1 class="info-name">${nameHtml(c.name)}</h1>` +
     `<div class="info-en">${esc(c.en)}</div>` +
     `<div class="wave deco"><i></i></div>` +
     `<div class="info-meta"><img class="el-icon" src="./element/${c.el}.webp" alt="" data-el="${c.el}" onerror="elIconFallback(this)"><span>${EL[c.el][0]}</span><span class="${c.rarity === 5 ? 'stars5' : 'stars4'}">${'★'.repeat(c.rarity)}</span></div>` +
     (o.stamp ? `<div class="info-stamp">${o.stamp}</div>` : '');
+  fitName(info.querySelector('.info-name'));
   if (!sameChar) {
     info.classList.remove('enter'); void info.offsetWidth; info.classList.add('enter');
     art.classList.remove('enter-l', 'enter-r'); void art.offsetWidth; art.classList.add(isRed ? 'enter-r' : 'enter-l');
@@ -2342,13 +2490,13 @@ function minimizeModal() { modalMinimized = true; updateModal(); }
 
 function renderGrid() {
   const grid = $('grid'); grid.innerHTML = '';
-  const q = $('search').value.trim().toLowerCase();
+  const q = toS($('search').value.trim().toLowerCase());
   let n = 0;
   chars.forEach(c => {
     if (filterType === '5star' && c.rarity !== 5) return;
     if (filterType === '4star' && c.rarity !== 4) return;
     if (EL[filterType] && c.el !== filterType) return;
-    if (q && !c.name.toLowerCase().includes(q) && !c.en.toLowerCase().includes(q)) return;
+    if (q && !toS(c.name).includes(q) && !c.en.toLowerCase().includes(q)) return;   // 繁簡都能搜尋
     n++;
     const h = state.history.find(x => x.type === 'pool' && x.cid === c.id);
     const st = h && state.steps[h.step];
@@ -2369,7 +2517,7 @@ function selectChar(id) {
   selected = id;
   if (myTurnToPick() && !(state.preview && state.preview.cid === id && state.preview.step === state.stepIdx)) dispatch({ type: 'preview', cid: id });
   const c = charById[id];
-  $('sel-name').textContent = c.name;
+  $('sel-name').innerHTML = nameHtml(c.name); fitName($('sel-name'));
   $('pk').style.setProperty('--sel', EL[c.el][1]);
   $('sel-meta').innerHTML = `<img class="el-icon sm" src="./element/${c.el}.webp" alt="" data-el="${c.el}" onerror="elIconFallback(this)"><span>${EL[c.el][0]}</span><span class="${c.rarity === 5 ? 'stars5' : 'stars4'}">${'★'.repeat(c.rarity)}</span>`;
   $('confirm').disabled = false; $('preview-hint').style.display = 'none';
@@ -2614,7 +2762,7 @@ async function buildResultImage() {
   ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff';
   fitText(ctx, state.meta.event, 1100, 46, 900); ctx.fillText(state.meta.event, W / 2, 78);
   if (logo) { const lh = 64, lw = logo.width * lh / logo.height; ctx.drawImage(logo, 40, 34, lw, lh); }
-  ctx.fillStyle = '#9aa3b2'; ctx.font = `500 20px 'Noto Sans TC', sans-serif`;
+  ctx.fillStyle = '#9aa3b2'; ctx.font = `500 20px 'Noto Sans TC', 'Noto Sans SC', sans-serif`;
   const d = new Date(), date = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
   const sr = state.series, gameTxt = sr.bo > 1 ? `GAME ${sr.results.length && sr.over ? sr.results[sr.results.length - 1].game : sr.game} · BO${sr.bo}　·　` : '';
   ctx.fillText(`${gameTxt}主辦人 ${state.meta.organizer}　·　${date}`, W / 2, 118);
@@ -2632,7 +2780,7 @@ async function buildResultImage() {
     ctx.font = `800 18px 'Chakra Petch', sans-serif`; ctx.fillText(team === 'blue' ? 'BLUE' : 'RED', 152, y + 54);
     ctx.fillStyle = '#ffffff'; fitText(ctx, state[team + 'Name'], 260, 32, 900); ctx.fillText(state[team + 'Name'], 62, y + 150);
     ctx.fillStyle = '#9aa3b2'; ctx.font = `600 17px 'Chakra Petch', sans-serif`; ctx.fillText('BAN', 62, y + 202);
-    if (state.order) { ctx.fillStyle = '#c9d0db'; ctx.font = `700 16px 'Noto Sans TC', sans-serif`; ctx.fillText(`${state.order.bpFirst === team ? '先手' : '後手'} BP · ${state.order.fightFirst === team ? '先' : '後'}出戰`, 120, y + 202); }
+    if (state.order) { ctx.fillStyle = '#c9d0db'; ctx.font = `700 16px 'Noto Sans TC', 'Noto Sans SC', sans-serif`; ctx.fillText(`${state.order.bpFirst === team ? '先手' : '後手'} BP · ${state.order.fightFirst === team ? '先' : '後'}出戰`, 120, y + 202); }
     const bans = state.steps.filter(s => s.t === 'ban' && s.team === team);
     const bs = bans.length > 1 ? 80 : 120, bgap = 8;
     for (let k = 0; k < bans.length; k++) {
@@ -2645,7 +2793,7 @@ async function buildResultImage() {
         ctx.strokeStyle = RED; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bx, by + bs); ctx.lineTo(bx + bs, by); ctx.stroke();
       }
       ctx.restore();
-      if (banCid && bans.length === 1) { ctx.fillStyle = '#c9d0db'; ctx.font = `700 18px 'Noto Sans TC', sans-serif`; ctx.fillText(charById[banCid].name, bx + bs + 14, by + 69); }
+      if (banCid && bans.length === 1) { ctx.fillStyle = '#c9d0db'; ctx.font = `700 18px 'Noto Sans TC', 'Noto Sans SC', sans-serif`; ctx.fillText(charById[banCid].name, bx + bs + 14, by + 69); }
       ctx.beginPath(); ctx.arc(bx + bs / 2, by + bs / 2, bs / 2 - 1, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5; ctx.stroke();
     }
     // 選角
@@ -2729,7 +2877,7 @@ async function buildSeriesImage() {
   ctx.textAlign = 'center'; ctx.fillStyle = TEXT;
   fitText(ctx, state.meta.event, 1100, 44, 900); ctx.fillText(state.meta.event, W / 2, 70);
   const d = new Date(), date = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
-  ctx.fillStyle = MUTED; ctx.font = `500 19px 'Noto Sans TC', sans-serif`;
+  ctx.fillStyle = MUTED; ctx.font = `500 19px 'Noto Sans TC', 'Noto Sans SC', sans-serif`;
   ctx.fillText(`${sr.bo > 1 ? `BO${sr.bo} 系列賽` : '單場'}${state.format === 'matrix' ? '・矩陣' : '・標準'}　·　主辦人 ${state.meta.organizer}　·　${date}`, W / 2, 106);
   ctx.font = `700 64px 'Chakra Petch', sans-serif`;
   const mid = `${sr.score.blue} : ${sr.score.red}`, mw = ctx.measureText(mid).width;
@@ -2767,7 +2915,7 @@ async function buildSeriesImage() {
       roundRect(ctx, 270, ry, W - 40 - 270 - 14, rh, 12); ctx.fillStyle = t === r.winner ? col + '26' : 'rgba(255,255,255,0.03)'; ctx.fill();
       ctx.fillStyle = col; roundRect(ctx, 270, ry, 4, rh, 2); ctx.fill();
       ctx.textAlign = 'left'; ctx.fillStyle = TEXT; fitText(ctx, state[t + 'Name'], 150, 20, 900); ctx.fillText(state[t + 'Name'], 290, ry + rh / 2 - 2);
-      if (r.order) { ctx.fillStyle = MUTED; ctx.font = `500 13px 'Noto Sans TC', sans-serif`; ctx.fillText(`${r.order.bpFirst === t ? '先手' : '後手'}・${r.order.fightFirst === t ? '先' : '後'}出戰`, 290, ry + rh / 2 + 22); }
+      if (r.order) { ctx.fillStyle = MUTED; ctx.font = `500 13px 'Noto Sans TC', 'Noto Sans SC', sans-serif`; ctx.fillText(`${r.order.bpFirst === t ? '先手' : '後手'}・${r.order.fightFirst === t ? '先' : '後'}出戰`, 290, ry + rh / 2 + 22); }
       let x = 456;
       ctx.fillStyle = MUTED; ctx.font = `600 12px 'Chakra Petch', sans-serif`; ctx.fillText('BAN', x, ry + rh / 2 + 4); x += 40;
       const bs = Math.min(52, s);
@@ -2779,7 +2927,7 @@ async function buildSeriesImage() {
       const size = Math.min(s, Math.floor((W - 40 - 14 - 16 - x - gapG * (groups.length - 1) - gap * n) / Math.max(1, n)));
       for (let gi = 0; gi < groups.length; gi++) {
         const bench = f && gi === 3;
-        if (f && groups[gi].length) { ctx.fillStyle = MUTED; ctx.font = `500 11px 'Noto Sans TC', sans-serif`; ctx.textAlign = 'left'; ctx.fillText(bench ? '不上場' : `第${'一二三'[gi]}隊`, x, ry + 15); }
+        if (f && groups[gi].length) { ctx.fillStyle = MUTED; ctx.font = `500 11px 'Noto Sans TC', 'Noto Sans SC', sans-serif`; ctx.textAlign = 'left'; ctx.fillText(bench ? '不上場' : `第${'一二三'[gi]}隊`, x, ry + 15); }
         for (const cid of groups[gi]) {
           const sn = r.sniped.includes(cid);
           await drawAv(cid, x, ry + (rh - size) / 2 + (f ? 9 : 0), f ? size - 12 : size, { dim: bench || sn, slash: sn });
@@ -3149,6 +3297,7 @@ function finishGate() {
    ============================================================ */
 buildStrips(); buildProgress(); setVoiceVolume(voiceVolume); render();
 preloadAssets();
+applyLang();
 /* 開啟網頁時：重新整理的房客自動連回、邀請連結帶入房號與身分、房主可恢復先前的房間 */
 (function boot() {
   const q = new URLSearchParams(location.search), room = (q.get('room') || '').replace(/\D/g, '').slice(0, 4), role = q.get('role');
